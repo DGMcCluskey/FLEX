@@ -108,3 +108,23 @@ lapply(names(out), function(samp) {
   )
 })
 ```
+
+```{r}
+library(ggplot2)
+
+samp <- "POMS_01Pool1LNSFunsort_G_BC004"  # pick one sample
+
+toc <- soup_channels[[samp]]$toc
+adj <- out[[samp]]
+
+# total UMIs per cell before and after
+df <- data.frame(
+  nUMIs = c(colSums(toc), colSums(adj)),
+  status = rep(c("Original", "Adjusted"), each = ncol(toc))
+)
+
+ggplot(df, aes(x = nUMIs, fill = status)) +
+  geom_density(alpha = 0.5) +
+  scale_x_log10() +
+  ggtitle(paste("UMI distribution before vs after SoupX:", samp))
+```
