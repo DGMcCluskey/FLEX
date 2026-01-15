@@ -1,0 +1,132 @@
+---
+title: "Untitled"
+format: html
+---
+
+# Peforming the scanpy pipeline (QC, transformation, clustering, DR) on the FLEX lung data
+## exploratory and advanced analysis will be done in a separate script for clarity
+
+```{python}
+import os
+import re
+import scanpy as sc
+import matplotlib.pyplot as plt
+import pandas as pd
+import numpy as np
+import seaborn as sns
+import anndata as ad
+from scipy.stats import median_abs_deviation
+```
+
+### using Tim's code, define the oultiers in the data, using different metrics
+```{python}
+#Define outliers in metrics of adata. Based on the function from sc-best-practices.
+# If nmads is set with the number of nmads to take, then the median absolute deviations method is used to calculate outliers.
+# If, instead, max_ and min_val are set, then these are used to manually filter for outliers.
+# Note that outliers are annotated as "metrics"_outlier in adata.obs, and are not removed.
+# A dataframe is also returned of the metric/outlier stats, including how many cells are outliers and the max/min values used.
+def is_outlier(adata,  
+               scPrefix: str, 
+               metrics: str, 
+               nmads: int | None = None, 
+               max_val: float | int | None = None,
+               min_val: float | int | None = None):
+    genotype_df = pd.DataFrame()
+    for metric in metrics:
+        M = adata.obs[metric]
+        if nmads is not None:
+            med_val = np.median(M)
+            med_dev = median_abs_deviation(M)
+            min_mad = med_val - nmads * med_dev
+            max_mad = med_val + nmads * med_dev
+        elif max_val is not None or min_val is not None :
+            #Minimum and/or Maximum value set manually in function
+            min_mad = min_val if min_val is not None else 0
+            max_mad = max_val if max_val is not None else np.inf
+            print(metric, 'min/max values have been manually set')
+
+        print('Minimum/Maximum value of', 
+              metric, 
+              round(min_mad, ndigits = 2), 
+              round(max_mad, ndigits = 2))
+        #Annotate the outliers in the adata.obs dataframe.
+        outlier = (M < min_mad) | ( max_mad < M )
+        adata.obs[metric+'_outlier'] = outlier
+        
+        # #Make a dataframe of outlier stats for each metric and genotype/patient.
+        # metric_genotype_df = pd.DataFrame()
+        # for genotype in adata.obs.Genotype_ID.unique():
+        #     gen_idx = adata.obs.Genotype_ID == genotype
+        #     num_below = sum(M[gen_idx] < min_mad)
+        #     num_above = sum(M[gen_idx] > max_mad)
+        #     num_filt = sum(outlier[gen_idx])
+        #     tot = sum(gen_idx)
+        #     metric_genotype_df = pd.concat([ metric_genotype_df, 
+        #                              pd.DataFrame({metric + '_minNum': num_below,
+        #                                            metric + '_maxNum': num_above,
+        #                                            metric + '_filtNum': num_filt,
+        #                                            metric + '_minPerc': round(100*num_below/tot,2),
+        #                                            metric + '_maxPerc': round(100*num_above/tot,2),
+        #                                            metric + '_filtPerc': round(100*num_filt/tot,2),
+        #                                            metric + '_min': round(min_mad,2) if min_mad > 0 else 0,
+        #                                            metric + '_max': round(max_mad,2)},
+        #                                           index = [ scPrefix + '_' + genotype ]) ],
+        #                             axis = 0, join = "outer")
+        # #Merge the outlier/genotype dataframes together. (TODO: I think this may be unnecessary, genotype_df is empty?)
+        # genotype_df = genotype_df.join(metric_genotype_df, how = "outer")
+
+        #Make a dataframe of outlier stats for each metric and pool.
+        # Then merge the outlier/pool dataframes across the metrics provided.
+        if metric == metrics[0]:
+            pool_df = pd.DataFrame({metric + '_min': round(min_mad,2) if min_mad > 0 else 0,
+                               metric + '_max': round(max_mad,2),
+                               metric + '_min_filtCells': sum(M < min_mad),
+                               metric + '_max_filtCells': sum(M > max_mad)},
+                              index = [ scPrefix ])
+        else:
+            pool_df = pool_df.join(pd.DataFrame({metric + '_min': round(min_mad,2) if min_mad > 0 else 0,
+                                       metric + '_max': round(max_mad,2),
+                                       metric + '_min_filtCells': sum(M < min_mad),
+                                       metric + '_max_filtCells': sum(M > max_mad)},
+                                      index = [ scPrefix ]))
+    
+    return adata, pool_df
+    #  genotype_df
+```
+
+# Prepare celltypist for later use
+```{python}
+import celltypist
+from celltypist import models
+```
+```{python}
+models.download_models(
+    force_update=True, 
+    model=["Cells_Fetal_Lung.pkl"]
+)
+model_foetal_lung = models.Model.load(model="Cells_Fetal_Lung.pkl")
+
+# CellTypist 'control'
+models.download_models(
+    force_update=True, 
+    model=["Human_IPF_Lung.pkl"]
+)
+model_adult_lung = models.Model.load(model="Human_IPF_Lung.pkl")
+```
+```{python}
+#Setting majority voting result as the cell label, 
+# the predicted label (for each cell, without clustering majority voting) will be the 'predict'
+def join_celltypist_df(celltypist_adata_obs, 
+                       input_adata_obs, 
+                       new_col_suffix):
+    """Join relevant columns of the celltypist dataframe with the adata.obs input"""
+    import pandas as pd
+    celltypist_df = pd.DataFrame({"celltypist_label_" + new_col_suffix : celltypist_adata_obs["majority_voting"],
+                                 "celltypist_predict_" + new_col_suffix : celltypist_adata_obs["predicted_labels"],
+                                 "celltypist_conf_score_" + new_col_suffix : celltypist_adata_obs["conf_score"]})
+    return input_adata_obs.join(celltypist_df)
+```
+
+```{python}
+
+```

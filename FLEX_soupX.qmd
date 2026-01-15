@@ -71,12 +71,17 @@ for (pool in pool_ident) {
 
 ```
 
+### estimate contamination. using a tfidmin of 0.2 based on tutorial recommendation and the fact it works (apparently some numbers can fail?)
 ```{r}
 soup_channels <- lapply(soup_channels, function(x) autoEstCont(x, tfidfMin = 0.2, forceAccept=TRUE))
 ```
+
+### perfrom the adjustment
 ```{r}
 out <- lapply(soup_channels, function(x) adjustCounts(x))
 ```
+
+### look a genes that have been zeroed the most
 ```{r}
 mostZeroed_per_sample <- lapply(names(out), function(samp) {
   sc <- soup_channels[[samp]]
@@ -94,6 +99,7 @@ mostZeroed_per_sample
 
 ```
 
+### save adjusted counts as new h5 files
 ```{r}
 lapply(names(out), function(samp) {
   # generate a unique file name per sample
@@ -109,6 +115,7 @@ lapply(names(out), function(samp) {
 })
 ```
 
+### plot histograms showing the shift in nUMI after adjustment to assess how many umis have actually been removed
 ```{r}
 library(ggplot2)
 
