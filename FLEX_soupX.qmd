@@ -93,7 +93,18 @@ names(mostZeroed_per_sample) <- names(out)
 mostZeroed_per_sample
 
 ```
+
 ```{r}
-plotChangeMap(soup_channels$, out, "ARSF")
-libra
+lapply(names(out), function(samp) {
+  # generate a unique file name per sample
+  out_file <- file.path("./soupx/", paste0(samp, "_soupx.h5"))
+  
+  # write adjusted counts
+  DropletUtils:::write10xCounts(
+    out_file,
+    out[[samp]],
+    overwrite = TRUE,
+    type = "HDF5"
+  )
+})
 ```
