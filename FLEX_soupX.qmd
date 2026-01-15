@@ -1,0 +1,76 @@
+---
+title: "Untitled"
+format: html
+---
+
+```{r}
+library(SoupX)
+library(Seurat)
+```
+
+```{r}
+flex_path <- "c:/Users/dan_m/OneDrive - University College London/UCL_Senior_Research_Fellow/FLEX/alignments_Jan26"
+
+pool_ident <- c(
+  "POMS_01Pool1LNSFunsort_G",
+  "POMS_01Pool2LNSFFACSsortunsort_G",
+  "POMS_01Pool3LNCFunsort_G",
+  "POMS_01Pool4LNCFFACSsortunsort_G"
+)
+
+sample_ident <- c("BC001", "BC002", "BC003", "BC004")
+```
+
+```{r}
+soup_channels <- list()
+
+for (pool in pool_ident) {
+  for (sample in sample_ident) {
+
+    counts_path <- file.path(
+      flex_path, pool,
+      "outs/per_sample_outs", sample,
+      "count/sample_filtered_feature_bc_matrix.h5"
+    )
+
+    droplets_path <- file.path(
+      flex_path, pool,
+      "outs/per_sample_outs", sample,
+      "count/sample_raw_feature_bc_matrix.h5"
+    )
+
+    clusters_path <- file.path(
+      flex_path, pool,
+      "outs/per_sample_outs", sample,
+      "count/analysis/clustering/gene_expression_graphclust/clusters.csv"
+    )
+
+    if (!file.exists(counts_path) ||
+        !file.exists(droplets_path)) {
+      message("Skipping missing: ", pool, " / ", sample)
+      next
+    }
+
+    counts <- Read10X_h5(counts_path)
+    droplets <- Read10X_h5(droplets_path)
+
+    ## Match genes (Flex fix)
+    common_genes <- intersect(rownames(droplets), rownames(counts))
+    droplets <- droplets[common_genes, , drop = FALSE]
+    counts   <- counts[common_genes, , drop = FALSE]
+    droplets <- droplets[rownames(counts), , drop = FALSE]
+
+    sc <- SoupChannel(droplets, counts, calcSoupProfile = FALSE)
+
+    clusters <- read.csv(clusters_path)
+    clusters <- setNames(clusters$Cluster, clusters$Barcode)
+
+    sc <- setClusters(sc, clusters)
+    sc <- estimateSoup(sc)
+
+    key <- paste(pool, sample, sep = "_")
+    soup_channels[[key]] <- sc
+  }
+}
+
+```
