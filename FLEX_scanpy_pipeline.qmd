@@ -128,5 +128,29 @@ def join_celltypist_df(celltypist_adata_obs,
 ```
 
 ```{python}
+soupx_path = "c:/Users/dan_m/OneDrive - University College London/UCL_Senior_Research_Fellow/FLEX/soupx/"
 
+pool_list = [
+  "POMS_01Pool1LNSFunsort_G",
+  "POMS_01Pool2LNSFFACSsort_G",
+  "POMS_01Pool3LNCFunsort_G",
+  "POMS_01Pool4LNCFFACSsort_G"
+  ]
+
+sample_list = ["BC001", "BC002", "BC003", "BC004"]
+```
+
+```{python}
+flex_data = []
+for pool_id in pool_list:
+    print(pool_id)
+    for sample_id in sample_list:
+        print(sample_id)
+        h5_path = soupx_path + pool_id + "_" + sample_id + '_soupx.h5'
+        h5 = sc.read_10x_h5(h5_path)
+        h5.obs['sample_id'] = sample_id
+        h5.obs['pool_id'] = pool_id
+        h5.obs_names = h5.obs_names + '_' + sample_id + pool_id
+        print(h5.shape)
+        flex_data.append(h5)
 ```
