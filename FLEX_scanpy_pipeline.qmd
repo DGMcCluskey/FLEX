@@ -208,8 +208,17 @@ flex_adata = reduce(lambda left, right: ad.concat([left, right], axis = 'obs', j
 flex_adata
 ```
 
+### cleaning up sample and pool names
 ```{python}
-
+pool_dict = {
+    "POMS_01Pool1LNSFunsort_G" : "snapfrozen_unsorted",
+    "POMS_01Pool2LNSFFACSsort_G" : "snapfrozen_sorted",
+    "POMS_01Pool3LNCFunsort_G" : "chopfix_unsorted",
+    "POMS_01Pool4LNCFFACSsort_G" : "chopfix_sorted"
+}
+flex_adata.obs["pool_id"] = flex_adata.obs["pool_id"].map(pool_dict)
+flex_adata.obs["donor"] = flex_adata.obs["sample_id"]
+flex_adata.obs["sample_Id"] = print(flex_adata.obs["pool_id"], "_", flex_adata.obs["donor"])
 ```
 ```{python}
 for s in flex_adata.obs["sample_id"].unique():
