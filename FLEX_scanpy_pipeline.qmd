@@ -218,7 +218,8 @@ pool_dict = {
 }
 flex_adata.obs["pool_id"] = flex_adata.obs["pool_id"].map(pool_dict)
 flex_adata.obs["donor"] = flex_adata.obs["sample_id"]
-flex_adata.obs["sample_Id"] = print(flex_adata.obs["pool_id"], "_", flex_adata.obs["donor"])
+flex_adata.obs["sample_id"] = (flex_adata.obs["donor"].astype(str) + "_" + flex_adata.obs["pool_id"].astype(str))
+flex_adata.obs
 ```
 ```{python}
 for s in flex_adata.obs["sample_id"].unique():
@@ -230,4 +231,14 @@ for s in flex_adata.obs["sample_id"].unique():
         title=f"QC: {s}",
         size=5
     )
+```
+
+```{python}
+sc.pl.violin(flex_adata, keys="pct_counts_mt", groupby="sample_id", stripplot=False, rotation=90, palette = ["mediumseagreen", "darkorchid", "orange", "grey"])
+mean_per_sample = flex_adata.obs.groupby("sample_id")["pct_counts_mt"].mean()
+print(mean_per_sample)
+plt.figure()
+sns.barplot(mean_per_sample)
+plt.xticks(rotation=90)
+plt.tight_layout()
 ```
