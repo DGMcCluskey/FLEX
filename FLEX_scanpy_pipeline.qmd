@@ -154,3 +154,71 @@ for pool_id in pool_list:
         print(h5.shape)
         flex_data.append(h5)
 ```
+
+```{python}
+for flex in flex_data:
+    #Annotate given classes of genes (Genes are saved in the .vars section of flex)
+    # mitochondrial genes
+    flex.var["mt"] = flex.var_names.str.startswith("MT-")
+    # hemoglobin genes.
+    flex.var["hb"] = flex.var_names.str.contains(("^HB[^(P)]"))
+    # Calculate metrics for these genes
+    sc.pp.calculate_qc_metrics(
+        flex, qc_vars=["mt", "hb"], inplace=True, percent_top=[20], log1p=True
+    )
+```
+
+```{python}
+flex_outlier_list = []
+for flex in flex_data:
+    sample_id = flex.obs['sample_id'][0]
+    print(sample_id)
+    # Identify outliers with nmads = 5 (a normal amount) for pcr_counts_mt
+    flex_outlier, pool_df = is_outlier(flex, 
+                                        metrics = ['pct_counts_mt'], 
+                                        # nmads = 3,
+                                        min_val = 0,
+                                        max_val = 50, 
+                                        scPrefix=sample_id)
+    # Identify outliers for total_counts and n_genes_by_counts with 99 percentile
+    flex_outlier, pool_df2 = is_outlier(flex_outlier, 
+                                        metrics = ['total_counts',], 
+                                        max_val = np.percentile(flex_outlier.obs['total_counts'], 99.9), 
+                                        min_val = 10,
+                                        scPrefix=sample_id)
+    flex_outlier, pool_df3 = is_outlier(flex_outlier, 
+                                        metrics = ['n_genes_by_counts',], 
+                                        max_val = np.percentile(flex_outlier.obs['n_genes_by_counts'], 99.9), 
+                                        min_val = 10,
+                                        scPrefix=sample_id)
+    pool_df = pool_df.join(pool_df2).join(pool_df3)
+    pool_df['pool_id'] = flex_outlier.obs['pool_id'][0]
+    #Annotate the cells which are an outlier by any metric by getting all outlier cols and applying 'sum' across each row.
+    outlier_columns = [i for i in flex_outlier.obs.columns if re.search("_outlier$",i) is not None]
+    flex_outlier.obs['outlier_any'] = flex_outlier.obs.loc[:, outlier_columns].apply(np.sum, axis = 1) > 0
+    flex_outlier.uns['pool_df'] = pool_df
+    print(flex_outlier.obs.value_counts(['total_counts_outlier', 'n_genes_by_counts_outlier', 'pct_counts_mt_outlier']))
+    flex_outlier_list.append(flex_outlier)
+```
+
+```{python}
+from functools import reduce
+#Merge the AnnData objects together.
+flex_adata = reduce(lambda left, right: ad.concat([left, right], axis = 'obs', join = 'outer'), flex_outlier_list)
+flex_adata
+```
+
+```{python}
+
+```
+```{python}
+for s in flex_adata.obs["sample_id"].unique():
+    sc.pl.scatter(
+        flex_adata[flex_adata.obs["sample_id"] == s],
+        x="total_counts",
+        y="n_genes_by_counts",
+        color="pct_counts_mt",
+        title=f"QC: {s}",
+        size=5
+    )
+```
