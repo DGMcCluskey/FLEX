@@ -241,4 +241,10 @@ plt.figure()
 sns.barplot(mean_per_sample)
 plt.xticks(rotation=90)
 plt.tight_layout()
+cells_per_sample = flex_adata.obs.groupby("sample_id").size()
+cells_per_sample
+plt.figure()
+sns.barplot(cells_per_sample)
+plt.xticks(rotation=90)
+plt.tight_layout()
 ```
