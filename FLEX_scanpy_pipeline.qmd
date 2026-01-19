@@ -221,6 +221,8 @@ flex_adata.obs["donor"] = flex_adata.obs["sample_id"]
 flex_adata.obs["sample_id"] = (flex_adata.obs["donor"].astype(str) + "_" + flex_adata.obs["pool_id"].astype(str))
 flex_adata.obs
 ```
+
+
 ```{python}
 for s in flex_adata.obs["sample_id"].unique():
     sc.pl.scatter(
@@ -233,18 +235,39 @@ for s in flex_adata.obs["sample_id"].unique():
     )
 ```
 
+
+### plotting number of cells per sample and the percentage mito genes
 ```{python}
-sc.pl.violin(flex_adata, keys="pct_counts_mt", groupby="sample_id", stripplot=False, rotation=90, palette = ["mediumseagreen", "darkorchid", "orange", "grey"])
 mean_per_sample = flex_adata.obs.groupby("sample_id")["pct_counts_mt"].mean()
-print(mean_per_sample)
-plt.figure()
-sns.barplot(mean_per_sample)
-plt.xticks(rotation=90)
-plt.tight_layout()
 cells_per_sample = flex_adata.obs.groupby("sample_id").size()
-cells_per_sample
-plt.figure()
-sns.barplot(cells_per_sample)
-plt.xticks(rotation=90)
+
+fig, axes = plt.subplots(2, 1, figsize=(10, 10))
+
+sc.pl.violin(
+    flex_adata,
+    keys="pct_counts_mt",
+    groupby="sample_id",
+    stripplot=False,
+    rotation=90,
+    palette=["mediumseagreen", "darkorchid", "orange", "grey"],
+    ax=axes[0],
+    show=False
+)
+axes[0].set_title("Mitochondrial % per sample")
+
+axes[0].tick_params(axis="x", labelbottom=False)
+
+sns.barplot(
+    x=cells_per_sample.index,
+    y=cells_per_sample.values,
+    ax=axes[1]
+)
+axes[1].set_title("Cells per sample")
+axes[1].set_xticklabels(axes[1].get_xticklabels(), rotation=90)
+axes[1].tick_params(axis="x", labelsize=16)
+
 plt.tight_layout()
+plt.savefig("qc_summary_.png", dpi=300, bbox_inches="tight")
+plt.show()
+
 ```
