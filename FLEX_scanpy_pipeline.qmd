@@ -238,14 +238,14 @@ for s in flex_adata.obs["sample_id"].unique():
 
 ### plotting number of cells per sample and the percentage mito genes
 ```{python}
-mean_per_sample = flex_adata.obs.groupby("sample_id")["pct_counts_mt"].mean()
-cells_per_sample = flex_adata.obs.groupby("sample_id").size()
 
-fig, axes = plt.subplots(2, 1, figsize=(10, 10))
+# Prepare figure: 2 rows, 1 column, share x-axis
+fig, axes = plt.subplots(2, 1, figsize=(8, 10), sharex=True)
 
+# Top violin: pct_counts_mt
 sc.pl.violin(
     flex_adata,
-    keys="pct_counts_mt",
+    keys=["pct_counts_mt"],
     groupby="sample_id",
     stripplot=False,
     rotation=90,
@@ -254,20 +254,59 @@ sc.pl.violin(
     show=False
 )
 axes[0].set_title("Mitochondrial % per sample")
+axes[0].tick_params(axis="x", labelbottom=False)  # remove x labels
 
-axes[0].tick_params(axis="x", labelbottom=False)
-
-sns.barplot(
-    x=cells_per_sample.index,
-    y=cells_per_sample.values,
-    ax=axes[1]
+# Bottom violin: n_genes_by_counts
+sc.pl.violin(
+    flex_adata,
+    keys=["n_genes_by_counts"],
+    groupby="sample_id",
+    stripplot=False,
+    rotation=90,
+    palette=["mediumseagreen", "darkorchid", "orange", "grey"],
+    ax=axes[1],
+    show=False
 )
-axes[1].set_title("Cells per sample")
-axes[1].set_xticklabels(axes[1].get_xticklabels(), rotation=90)
-axes[1].tick_params(axis="x", labelsize=16)
+axes[1].set_title("Genes per cell per sample")
+
+# Optional: bold + rotate bottom x-axis labels
+plt.setp(
+    axes[1].get_xticklabels(),
+    rotation=90,
+    fontsize=14,
+    fontweight="bold"
+)
 
 plt.tight_layout()
-plt.savefig("qc_summary_.png", dpi=300, bbox_inches="tight")
+plt.savefig("qc_summary.png", dpi=300, bbox_inches="tight")
 plt.show()
+
+```
+
+```{python}
+plt.figure()
+sns.barplot(
+    x=cells_per_sample.index,
+    y=cells_per_sample.values
+)
+plt.xticks(rotation=90)
+plt.tight_layout()
+plt.savefig("total_counts.png", dpi=300, bbox_inches="tight")
+plt.show()
+```
+
+```{python}
+pd.crosstab(flex_adata.obs['sample_id'], [
+    flex_adata.obs['outlier_any'],
+    flex_adata.obs['pct_counts_mt'] < 25,
+    (flex_adata.obs['total_counts'] > 10),
+    (flex_adata.obs['n_genes_by_counts'] > 10)])
+```
+
+```{python}
+flex_adata.obs.value_counts(['total_counts_outlier', 'n_genes_by_counts_outlier', 'pct_counts_mt_outlier'])
+```
+
+```{python}
 
 ```
