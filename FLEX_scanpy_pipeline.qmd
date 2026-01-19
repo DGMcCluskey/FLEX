@@ -201,6 +201,42 @@ for flex in flex_data:
     flex_outlier_list.append(flex_outlier)
 ```
 
+# DOUBLET REMOVAL
+### this should be done on samples individually
+### using scDblFinder (an R package)
+
+```{python}
+# Standard imports
+import logging
+import rpy2.robjects as ro
+import rpy2.rinterface_lib.callbacks as rcb
+import anndata2ri
+
+# Suppress R warning messages
+rcb.logger.setLevel(logging.ERROR)
+
+# Activate rpy2 conversions (pandas <-> R)
+from rpy2.robjects import pandas2ri
+pandas2ri.activate()
+anndata2ri.activate()
+
+# Load the IPython extension
+%load_ext rpy2.ipython
+
+```
+
+```{r}
+library(Seurat)
+library(scater)
+library(scDblFinder)
+library(BiocParallel)
+```
+
+```{r}
+
+```
+
+# MERGE SAMPLES INTO ONE OBJECT
 ```{python}
 from functools import reduce
 #Merge the AnnData objects together.
@@ -222,7 +258,7 @@ flex_adata.obs["sample_id"] = (flex_adata.obs["donor"].astype(str) + "_" + flex_
 flex_adata.obs
 ```
 
-
+# QUALITY CONTROL
 ```{python}
 for s in flex_adata.obs["sample_id"].unique():
     sc.pl.scatter(
@@ -240,7 +276,7 @@ for s in flex_adata.obs["sample_id"].unique():
 ```{python}
 
 # Prepare figure: 2 rows, 1 column, share x-axis
-fig, axes = plt.subplots(2, 1, figsize=(8, 10), sharex=True)
+fig, axes = plt.subplots(3, 1, figsize=(8, 10), sharex=True)
 
 # Top violin: pct_counts_mt
 sc.pl.violin(
@@ -259,7 +295,7 @@ axes[0].tick_params(axis="x", labelbottom=False)  # remove x labels
 # Bottom violin: n_genes_by_counts
 sc.pl.violin(
     flex_adata,
-    keys=["n_genes_by_counts"],
+    keys=["pct_counts_hb"],
     groupby="sample_id",
     stripplot=False,
     rotation=90,
@@ -267,11 +303,22 @@ sc.pl.violin(
     ax=axes[1],
     show=False
 )
-axes[1].set_title("Genes per cell per sample")
+axes[1].set_title("Haemoglobin % per sample")
 
+sc.pl.violin(
+    flex_adata,
+    keys=["n_genes_by_counts"],
+    groupby="sample_id",
+    stripplot=False,
+    rotation=90,
+    palette=["mediumseagreen", "darkorchid", "orange", "grey"],
+    ax=axes[2],
+    show=False
+)
+axes[2].set_title("Genes per cell per sample")
 # Optional: bold + rotate bottom x-axis labels
 plt.setp(
-    axes[1].get_xticklabels(),
+    axes[2].get_xticklabels(),
     rotation=90,
     fontsize=14,
     fontweight="bold"
@@ -300,13 +347,89 @@ pd.crosstab(flex_adata.obs['sample_id'], [
     flex_adata.obs['outlier_any'],
     flex_adata.obs['pct_counts_mt'] < 25,
     (flex_adata.obs['total_counts'] > 10),
-    (flex_adata.obs['n_genes_by_counts'] > 10)])
+    (flex_adata.obs['n_genes_by_counts'] > 10),
+    flex_adata.obs['pct_counts_hb'] < 10])
 ```
 
 ```{python}
 flex_adata.obs.value_counts(['total_counts_outlier', 'n_genes_by_counts_outlier', 'pct_counts_mt_outlier'])
 ```
 
+# FILTERING
+### removing cells with more than 25% mito counts, less than 10 counts and less than 10 unique genes
 ```{python}
+flex_adata = flex_adata[(flex_adata.obs['pct_counts_mt'] < 25) & 
+    (flex_adata.obs['total_counts'] > 10) & 
+    (flex_adata.obs['n_genes_by_counts'] > 10) &
+    (flex_adata.obs['pct_counts_hb'] < 10), :]
+```
 
+### check after filtering
+```{python}
+sc.pl.violin(flex_adata, keys = ['total_counts', 'n_genes_by_counts', 'pct_counts_mt', "pct_counts_hb"], groupby = 'sample_id', rotation = 90, multi_panel = True)
+```
+
+# NORMALISATION
+```{python}
+flex_adata.layers['counts'] = flex_adata.X.copy()
+sc.pp.normalize_total(flex_adata, target_sum=1e4)
+sc.pp.log1p(flex_adata)
+flex_adata.layers['logcounts'] = flex_adata.X.copy()
+```
+```{python}
+plt.figure()
+sns.histplot(
+        flex_adata.layers['counts'].sum(1), bins=500, kde=False
+    )
+plt.show()
+
+plt.figure()
+sns.histplot(
+        flex_adata.layers['logcounts'].sum(1), bins=500, kde=False
+    )
+plt.show()
+```
+
+# EMBEDDING
+### first calculate HVGs
+```{python}
+sc.pp.highly_variable_genes(
+    flex_adata, 
+    n_top_genes=2000, 
+    flavor="cell_ranger", 
+    batch_key='sample_id', 
+    layer = 'logcounts',
+    subset = False
+)
+```
+
+```{python}
+sc.pl.highly_variable_genes(flex_adata)
+```
+
+### run PCA
+```{python}
+sc.pp.pca(flex_adata, svd_solver="arpack", use_highly_variable=True)
+```
+
+```{python}
+sc.pl.pca_variance_ratio(flex_adata, n_pcs=50, log=True)
+```
+
+```{python}
+plt.figure(figsize=[8,5])
+sc.pl.pca(
+    flex_adata, legend_loc="best",
+    color=["donor", "pool_id", "pct_counts_mt"],
+    ncols=3,
+    size=2,
+)
+plt.tight_layout()
+plt.savefig("PCA_inspection.png", dpi=300, bbox_inches="tight")
+plt.show()
+```
+
+```{python}
+sc.pp.neighbors(flex_adata, n_pcs=30)
+sc.tl.umap(flex_adata, random_state=2025)
 ```
