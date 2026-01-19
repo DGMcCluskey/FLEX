@@ -201,8 +201,17 @@ for flex in flex_data:
     flex_outlier_list.append(flex_outlier)
 ```
 
+
+# MERGE SAMPLES INTO ONE OBJECT
+```{python}
+from functools import reduce
+#Merge the AnnData objects together.
+flex_adata = reduce(lambda left, right: ad.concat([left, right], axis = 'obs', join = 'outer'), flex_outlier_list)
+flex_adata
+```
+
 # DOUBLET REMOVAL
-### this should be done on samples individually
+### this should be done on samples individually, which scDblFinder is capable of doing if you give it a sample column, so a merged object is ok
 ### using scDblFinder (an R package)
 
 ```{python}
@@ -230,18 +239,6 @@ library(Seurat)
 library(scater)
 library(scDblFinder)
 library(BiocParallel)
-```
-
-```{r}
-
-```
-
-# MERGE SAMPLES INTO ONE OBJECT
-```{python}
-from functools import reduce
-#Merge the AnnData objects together.
-flex_adata = reduce(lambda left, right: ad.concat([left, right], axis = 'obs', join = 'outer'), flex_outlier_list)
-flex_adata
 ```
 
 ### cleaning up sample and pool names
