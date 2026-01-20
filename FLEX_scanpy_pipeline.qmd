@@ -9,6 +9,7 @@ format: html
 ```{python}
 import os
 import re
+import sys
 import scanpy as sc
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -210,37 +211,6 @@ flex_adata = reduce(lambda left, right: ad.concat([left, right], axis = 'obs', j
 flex_adata
 ```
 
-# DOUBLET REMOVAL
-### this should be done on samples individually, which scDblFinder is capable of doing if you give it a sample column, so a merged object is ok
-### using scDblFinder (an R package)
-
-```{python}
-# Standard imports
-import logging
-import rpy2.robjects as ro
-import rpy2.rinterface_lib.callbacks as rcb
-import anndata2ri
-
-# Suppress R warning messages
-rcb.logger.setLevel(logging.ERROR)
-
-# Activate rpy2 conversions (pandas <-> R)
-from rpy2.robjects import pandas2ri
-pandas2ri.activate()
-anndata2ri.activate()
-
-# Load the IPython extension
-%load_ext rpy2.ipython
-
-```
-
-```{r}
-library(Seurat)
-library(scater)
-library(scDblFinder)
-library(BiocParallel)
-```
-
 ### cleaning up sample and pool names
 ```{python}
 pool_dict = {
@@ -253,6 +223,27 @@ flex_adata.obs["pool_id"] = flex_adata.obs["pool_id"].map(pool_dict)
 flex_adata.obs["donor"] = flex_adata.obs["sample_id"]
 flex_adata.obs["sample_id"] = (flex_adata.obs["donor"].astype(str) + "_" + flex_adata.obs["pool_id"].astype(str))
 flex_adata.obs
+```
+
+# DOUBLET REMOVAL
+### this should be done on samples individually, which scDblFinder is capable of doing if you give it a sample column, so a merged object is ok
+### using scDblFinder (an R package)
+
+
+### i need to save anndata file then load it into R using Seurat's functions (where it will be a seurat object)
+### i then convert seurat object into sce for use with scdblfinder
+### after that i convert back into anndata
+
+```{python}
+flex_adata.write("flex_adata_combined_pre_qc.h5ad")
+```
+
+```{r}
+library(reticulate)
+library(SingleCellExperiment)
+
+sce <- py$adata
+sce
 ```
 
 # QUALITY CONTROL
