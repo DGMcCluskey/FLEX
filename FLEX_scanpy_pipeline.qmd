@@ -515,3 +515,86 @@ max_epochs_scvi
 ```{python}
 model_scvi.train()
 ```
+
+```{python}
+flex_adata.obsm["X_scVI"] = model_scvi.get_latent_representation()
+sc.pp.neighbors(flex_adata, use_rep="X_scVI")
+sc.tl.umap(flex_adata)
+```
+
+```{python}
+plt.figure(figsize=(20,15))
+sc.pl.umap(flex_adata, color=["pool_id", "donor"], wspace=0.5,show=True, size=2)
+plt.tight_layout()
+plt.savefig("UMAP_scvi_singlets.png",dpi=300)
+```
+
+```{python}
+plt.figure(figsize=(20,15))
+sc.pl.umap(flex_adata, color=["pct_counts_mt", "pct_counts_hb", "total_counts"])
+plt.tight_layout()
+plt.savefig("UMAP_scvi_QC_singlets.png",dpi=300)
+```
+
+# CELLTYPIST
+### running celltypist to immediately get an idea of any more junk clusters
+```{python}
+predictions_lung = celltypist.annotate(
+    flex_adata, model=model_foetal_lung, majority_voting=True
+)
+predictions_lung_adata = predictions_lung.to_adata()
+flex_adata.obs = join_celltypist_df(predictions_lung_adata.obs, flex_adata.obs, "foetal_lung_celltypist")
+```
+
+```{python}
+flex_adata.obs['celltypist_label_foetal_lung_celltypist'].value_counts()
+```
+
+```{python}
+plt.figure(figsize=(5,8))
+sc.pl.umap(flex_adata, color=["celltypist_label_foetal_lung_celltypist"])
+plt.tight_layout()
+plt.savefig("UMAP_scvi_celltypist.png",dpi=300)
+```
+
+```{python}
+sc.pl.umap(flex_adata, color=["CD3D", "LYZ", "CD79A"])
+```
+
+```{python}
+counts = (
+    flex_adata.obs
+    .groupby(["sample_id", "celltypist_label_foetal_lung_celltypist"])
+    .size()
+    .unstack(fill_value=0)
+)
+
+# convert to proportions
+proportions = counts.div(counts.sum(axis=1), axis=0)
+
+proportions.head()
+proportions = proportions * 100
+```
+
+```{python}
+palette = flex_adata.uns["celltypist_label_foetal_lung_celltypist_colors"]
+celltype_order = flex_adata.obs["celltypist_label_foetal_lung_celltypist"].cat.categories
+proportions = proportions[celltype_order]
+
+proportions.plot(
+    kind="bar",
+    stacked=True,
+    color = palette,
+    figsize=(10, 6)
+)
+
+plt.ylabel("Proportion of cells")
+plt.xlabel("Sample")
+plt.legend(
+    title="Cell type",
+    bbox_to_anchor=(1.05, 1),
+    loc="upper left"
+)
+plt.tight_layout()
+plt.show()
+```
