@@ -418,7 +418,34 @@ sc.tl.umap(flex_adata, random_state=2025)
 
 ```{python}
 plt.figure(figsize=(20,15))
-sc.pl.umap(flex_adata, color=["pool_id", "donor"], wspace=0.5,show=True)
+sc.pl.umap(flex_adata, color=["pool_id", "donor"], wspace=0.5,show=True, size = 2)
 plt.tight_layout()
 plt.savefig("UMAP_uncorrected.png",dpi=300)
+```
+
+### batch correction definately needed
+
+# BACTH CORRECTION
+### will use scVI as successful in the past and well regarded
+### batch aware hvgs already generated before so can go striaght to setting up model
+```{python}
+flex_hvg = flex_adata[:, flex_adata.var["highly_variable"]].copy()
+flex_hvg
+```
+
+```{python}
+import scvi
+scvi.model.SCVI.setup_anndata(flex_hvg, layer="counts", batch_key="sample_id")
+flex_hvg
+model_scvi = scvi.model.SCVI(flex_hvg)
+model_scvi
+model_scvi.view_anndata_setup()
+```
+```{python}
+max_epochs_scvi = np.min([round((20000 / flex_adata.n_obs) * 400), 400])
+max_epochs_scvi
+```
+
+```{python}
+model_scvi.train()
 ```
