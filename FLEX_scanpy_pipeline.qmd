@@ -551,12 +551,15 @@ flex_adata.obs['celltypist_label_foetal_lung_celltypist'].value_counts()
 ```
 
 ```{python}
-plt.figure(figsize=(5,8))
-sc.pl.umap(flex_adata, color=["celltypist_label_foetal_lung_celltypist"])
+plt.figure(figsize=(5,20))
+sc.pl.umap(flex_adata, color=["celltypist_label_foetal_lung_celltypist"], size=3)
 plt.tight_layout()
-plt.savefig("UMAP_scvi_celltypist.png",dpi=300)
+plt.savefig("UMAP_scvi_celltypist.png",dpi=300, bbox_inches="tight")
 ```
 
+```{python}
+flex_adata.write_h5ad("flex_adata_clustered.h5")
+```
 ```{python}
 sc.pl.umap(flex_adata, color=["CD3D", "LYZ", "CD79A"])
 ```
@@ -596,5 +599,14 @@ plt.legend(
     loc="upper left"
 )
 plt.tight_layout()
+plt.savefig("Celltypist_proportions.png", dpi=300, bbox_inches="tight")
 plt.show()
+```
+
+```{python}
+proportions.to_csv("celltypist_foetal_lung_proportions.csv")
+```
+
+```{python}
+
 ```
