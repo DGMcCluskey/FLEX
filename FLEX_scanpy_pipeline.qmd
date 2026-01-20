@@ -237,6 +237,11 @@ flex_adata.write("flex_adata_combined_pre_qc.h5ad")
 # DOUBLET REMOVAL
 ### see doublet removal script
 
+### after doublet removal script has been run, load the data back in for QC
+```{python}
+flex_adata = sc.read_h5ad("flex_data_doublets_identified.h5ad")
+flex_adata
+```
 
 # QUALITY CONTROL
 ```{python}

@@ -24,13 +24,15 @@ adata <- scDblFinder(adata, samples = "sample_id", dbr.sd = 1)
 ```
 
 ```{r}
-doublet_score <- adata$scDblFinder.score
-doublet_class <- adata$scDblFinder.class
+colData(adata)$doublet_score <- colData(adata)$scDblFinder.score
+colData(adata)$doublet_class <- colData(adata)$scDblFinder.class
 ```
 
 ```{r}
-table(adata$scDblFinder.class, adata$sample_id)
+table(adata$doublet_class, adata$sample_id)
+adata <- as_AnnData(adata)
+adata
 ```
 ```{r}
-write_h5ad(adata, path ="flex_data_doublets_identified.h5ad")
+write_h5ad(adata, path ="flex_data_doublets_identified.h5ad", mode = "w")
 ```
