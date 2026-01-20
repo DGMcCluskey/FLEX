@@ -6,15 +6,31 @@ format: html
 # FLEX lung doublet removal using ScDblFinder
 
 ```{r}
-library(zellkonverter)
+library(anndataR)
 library(SingleCellExperiment)
 library(scDblFinder)
 ```
 
+
+
 ```{r}
-library(reticulate)
-use_python("C:/Users/dan_m/AppData/Local/Programs/Python/Python313/python.exe", required = TRUE)
+adata <- read_h5ad("flex_adata_combined_pre_qc.h5ad", as = "SingleCellExperiment")
+adata
+```
+
+```{r}
+assay(adata, "counts") <- assay(adata, "X")
+adata <- scDblFinder(adata, samples = "sample_id", dbr.sd = 1)
+```
+
+```{r}
+doublet_score <- adata$scDblFinder.score
+doublet_class <- adata$scDblFinder.class
+```
+
+```{r}
+table(adata$scDblFinder.class, adata$sample_id)
 ```
 ```{r}
-sce <- readH5AD("flex_adata_combined_pre_qc.h5ad", use_basilisk=F)
+write_h5ad(adata, path ="flex_data_doublets_identified.h5ad")
 ```
