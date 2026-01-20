@@ -19,6 +19,10 @@ import anndata as ad
 from scipy.stats import median_abs_deviation
 ```
 
+```{python}
+print(sys.executable)
+```
+
 ### using Tim's code, define the oultiers in the data, using different metrics
 ```{python}
 #Define outliers in metrics of adata. Based on the function from sc-best-practices.
@@ -225,18 +229,14 @@ flex_adata.obs["sample_id"] = (flex_adata.obs["donor"].astype(str) + "_" + flex_
 flex_adata.obs
 ```
 
-# DOUBLET REMOVAL
-### this should be done on samples individually, which scDblFinder is capable of doing if you give it a sample column, so a merged object is ok
-### using scDblFinder (an R package)
-
-
-### i need to save anndata file then load it into R using Seurat's functions (where it will be a seurat object)
-### i then convert seurat object into sce for use with scdblfinder
-### after that i convert back into anndata
-
+### save object
 ```{python}
 flex_adata.write("flex_adata_combined_pre_qc.h5ad")
 ```
+
+# DOUBLET REMOVAL
+### see doublet removal script
+
 
 # QUALITY CONTROL
 ```{python}
