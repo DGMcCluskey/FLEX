@@ -441,7 +441,73 @@ model_scvi = scvi.model.SCVI(flex_hvg)
 model_scvi
 model_scvi.view_anndata_setup()
 ```
+
+### set epoch number based on cell numbers (recommended in tutorial)
 ```{python}
+max_epochs_scvi = np.min([round((20000 / flex_adata.n_obs) * 400), 400])
+max_epochs_scvi
+```
+
+### run model
+```{python}
+model_scvi.train()
+```
+
+### extract the embedding and add it to the full data
+### calculate batch-corrected umap
+```{python}
+flex_adata.obsm["X_scVI"] = model_scvi.get_latent_representation()
+sc.pp.neighbors(flex_adata, use_rep="X_scVI")
+sc.tl.umap(flex_adata)
+```
+
+```{python}
+plt.figure(figsize=(20,15))
+sc.pl.umap(flex_adata, color=["pool_id", "donor"], wspace=0.5,show=True, size=2)
+plt.tight_layout()
+plt.savefig("UMAP_scvi.png",dpi=300)
+```
+
+
+# EXPLORATORY QC/ANALYSIS BASED ON UMAP
+### insepction of key metrics suggest the strange middle clusters are doublets, so will remove and re-cluster
+```{python}
+plt.figure(figsize=(20,15))
+sc.pl.umap(flex_adata, color=["pct_counts_mt", "doublet_score", "doublet_class"])
+plt.tight_layout()
+plt.savefig("UMAP_scvi_QC.png",dpi=300)
+```
+
+### subset singlets
+### get some metrics for how many removed
+### note: 91,493 cells before subset and 71,540 afterwards
+```{python}
+doublet_table = pd.crosstab(flex_adata.obs['sample_id'], flex_adata.obs['doublet_class'])
+doublet_table.to_csv("doublet_counts_per_sample.csv")
+flex_adata = flex_adata[flex_adata.obs["doublet_class"].isin(["singlet"])].copy()
+flex_adata
+```
+
+# 2ND ROUND OF BATCH CORRECTION AND CLUSTERING
+```{python}
+sc.pp.highly_variable_genes(
+    flex_adata, 
+    n_top_genes=2000, 
+    flavor="cell_ranger", 
+    batch_key='sample_id', 
+    layer = 'logcounts',
+    subset = False
+)
+flex_hvg = flex_adata[:, flex_adata.var["highly_variable"]].copy()
+flex_hvg
+```
+
+```{python}
+scvi.model.SCVI.setup_anndata(flex_hvg, layer="counts", batch_key="sample_id")
+flex_hvg
+model_scvi = scvi.model.SCVI(flex_hvg)
+model_scvi
+model_scvi.view_anndata_setup()
 max_epochs_scvi = np.min([round((20000 / flex_adata.n_obs) * 400), 400])
 max_epochs_scvi
 ```
