@@ -557,12 +557,6 @@ plt.tight_layout()
 plt.savefig("UMAP_scvi_celltypist.png",dpi=300, bbox_inches="tight")
 ```
 
-### save/laod point
-```{python}
-#flex_adata.write_h5ad("flex_adata_clustered.h5")
-flex_adata = sc.read_h5ad("flex_adata_clustered.h5ad")
-```
-
 ```{python}
 sc.pl.umap(flex_adata, color=["celltypist_conf_score_foetal_lung_celltypist"], size=10, orde)
 ```
@@ -618,6 +612,12 @@ proportions.to_csv("celltypist_foetal_lung_proportions.csv")
 ```{python}
  for res in [0.2,0.5,1,1.5,2]:
     sc.tl.leiden(flex_adata, key_added = "leiden_res_" + str(res), resolution = res)
+```
+
+### save/load point
+```{python}
+#flex_adata.write_h5ad("flex_adata_clustered.h5")
+flex_adata = sc.read_h5ad("flex_adata_clustered.h5ad")
 ```
 
 ```{python}
@@ -754,9 +754,9 @@ sc.tl.rank_genes_groups(
 
 ### plot genes
 ```{python}
-plt.figure(figsize=(30,20))
-sc.pl.rank_genes_groups_dotplot(groups="12",
-    flex_adata, groupby="leiden_res_1", standard_scale="var", n_genes=5, key="dea_leiden_1"
+plt.figure(figsize=(15,10))
+sc.pl.rank_genes_groups_dotplot(
+    flex_adata, groupby="leiden_res_1", standard_scale="var", n_genes=30, key="dea_leiden_1",groups=["12"],
 )
 plt.tight_layout()
 plt.savefig("resolution_1_cluster_12_deg_dotplot.png", dpi=300, bbox_inches="tight")
