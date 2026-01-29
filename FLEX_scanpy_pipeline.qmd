@@ -616,21 +616,31 @@ proportions.to_csv("celltypist_foetal_lung_proportions.csv")
 
 # CLUSTERING
 ```{python}
- for res in [0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1,1.1,1.2,1.3,1.4,1.5,1.6,1.7,1.8,1.9,2]:
+ for res in [0.2,0.5,1,1.5,2]:
     sc.tl.leiden(flex_adata, key_added = "leiden_res_" + str(res), resolution = res)
 ```
 
 ```{python}
-plt.figure(figsize=(5,10))
+plt.figure(figsize=(10,10))
 sc.pl.umap(
     flex_adata,
-    color=["leiden_res_1.1", "leiden_res_1.2", "leiden_res_1.3",
-     "leiden_res_1.4", "leiden_res_1.5", "leiden_res_1.6", "leiden_res_1.7",
-     "leiden_res_1.8", "leiden_res_1.9", "leiden_res_2"], 
-    size = 50, legend_fontsize="x-large", ncols=5
+    color=["leiden_res_0.2", "leiden_res_0.5", "leiden_res_1",
+     "leiden_res_1.5", "leiden_res_2"], 
+    size = 20, legend_fontsize="x-large", ncols=2, wspace=0.5
 )
 plt.tight_layout()
 plt.savefig("clustering_resolutions.png", dpi=300, bbox_inches="tight")
+```
+
+```{python}
+plt.figure(figsize=(15,10))
+sc.pl.umap(
+    flex_adata,
+    color=["leiden_res_1"], 
+    size = 20, legend_fontsize="x-large", wspace=0.5, legend_loc="on data"
+)
+plt.tight_layout()
+plt.savefig("clustering_res_1.png", dpi=300, bbox_inches="tight")
 ```
 
 ### function to split umaps
@@ -650,15 +660,7 @@ def split_umap(adata, split_by, ncol=2, nrow=None, **kwargs):
 ```{python}
 plt.figure(figsize=(10,10))
 split_umap(flex_adata, color="donor", split_by="pool_id")
-plt.tight_layout()
-plt.savefig("umap_split_donor_pool.png", dpi=300, bbox_inches="tight")
-```
-
-### checking if centre mass is high in ribosomal genes
-```{python}
-ribos = [g for g in flex_adata.var_names if g.startswith(("RPL","RPS"))]
-flex_adata.obs["ribo_frac"] = flex_adata[:, ribos].X.sum(1) / flex_adata.X.sum(1)
-sc.pl.umap(flex_adata, color="ribo_frac")
+C
 ```
 
 ### checking cell cycle genes
@@ -721,35 +723,43 @@ sc.pl.umap(flex_adata, color=present, vmax="p99")
 ```{python}
 sc.pl.umap(
     flex_adata,
-    color=["donor", "pool_id", "pct_counts_mt", "pct_counts_hb", "total_counts", "doublet_score"], 
+    color=["pct_counts_mt", "pct_counts_hb", "total_counts", "doublet_score"], 
     size = 20, legend_fontsize="x-large", ncols=2
 )
-sc.pl.umap(
-    flex_adata,
-    color=["leiden_res_2"], 
-    size = 50, legend_fontsize="large", ncols=5, legend_loc="on data"
-)
-
-sc.tl.score_genes_cell_cycle(flex_adata, s_genes, g2m_genes)
-sc.pl.umap(adata, color=["S_score", "G2M_score"])
 ```
 
-### im going to take the largest resolution and see if clusters are truly different
+### assess the "mass" cluster for QC metrics (cluster 12 on resolution 1)
+```{python}
+plt.figure(figsize=(20,6))
+sc.pl.matrixplot(flex_adata, var_names=["pct_counts_mt", "total_counts", "n_genes_by_counts", "doublet_score"], standard_scale="var", swap_axes=True,
+groupby="leiden_res_1")
+plt.tight_layout()
+plt.savefig("heatmap_cluster_qc.png", dpi=300, bbox_inches="tight")
+```
+
+```{python}
+plt.figure(figsize=(15,20))
+sc.pl.violin(flex_adata, keys=["log1p_total_counts"], groupby="leiden_res_1", stripplot=False)
+plt.tight_layout()
+plt.savefig("cluster_total_counts_violin_qc.png", dpi=300, bbox_inches="tight")
+```
+
+### im going to take a reolution that has the "mass" as a single cluster to assess genes
 ### run dea to idenitfy marker genes per cluster 
 ```{python}
 sc.tl.rank_genes_groups(
-    flex_adata, groupby="leiden_res_2", method="wilcoxon", key_added="dea_leiden_2"
+    flex_adata, groupby="leiden_res_1", method="wilcoxon", key_added="dea_leiden_1"
 )
 ```
 
 ### plot genes
 ```{python}
 plt.figure(figsize=(30,20))
-sc.pl.rank_genes_groups_dotplot(
-    flex_adata, groupby="leiden_res_2", standard_scale="var", n_genes=5, key="dea_leiden_2"
+sc.pl.rank_genes_groups_dotplot(groups="12",
+    flex_adata, groupby="leiden_res_1", standard_scale="var", n_genes=5, key="dea_leiden_1"
 )
 plt.tight_layout()
-plt.savefig("resolution_2_deg_dotplot.png", dpi=300, bbox_inches="tight")
+plt.savefig("resolution_1_cluster_12_deg_dotplot.png", dpi=300, bbox_inches="tight")
 ```
 
 ### plot manually curated markers taken from publications
