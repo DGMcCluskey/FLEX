@@ -12,7 +12,6 @@ library(scDblFinder)
 ```
 
 
-
 ```{r}
 adata <- read_h5ad("flex_adata_combined_pre_qc.h5ad", as = "SingleCellExperiment")
 adata

@@ -261,7 +261,7 @@ for s in flex_adata.obs["sample_id"].unique():
 ```{python}
 
 # Prepare figure: 2 rows, 1 column, share x-axis
-fig, axes = plt.subplots(3, 1, figsize=(8, 10), sharex=True)
+fig, axes = plt.subplots(4, 1, figsize=(8, 10), sharex=True)
 
 # Top violin: pct_counts_mt
 sc.pl.violin(
@@ -292,7 +292,7 @@ axes[1].set_title("Haemoglobin % per sample")
 
 sc.pl.violin(
     flex_adata,
-    keys=["n_genes_by_counts"],
+    keys=["log1p_total_counts"],
     groupby="sample_id",
     stripplot=False,
     rotation=90,
@@ -300,10 +300,22 @@ sc.pl.violin(
     ax=axes[2],
     show=False
 )
-axes[2].set_title("Genes per cell per sample")
+axes[2].set_title("Total counts per sample")
+
+sc.pl.violin(
+    flex_adata,
+    keys=["n_genes_by_counts"],
+    groupby="sample_id",
+    stripplot=False,
+    rotation=90,
+    palette=["mediumseagreen", "darkorchid", "orange", "grey"],
+    ax=axes[3],
+    show=False
+)
+axes[3].set_title("Genes per cell per sample")
 # Optional: bold + rotate bottom x-axis labels
 plt.setp(
-    axes[2].get_xticklabels(),
+    axes[3].get_xticklabels(),
     rotation=90,
     fontsize=14,
     fontweight="bold"
@@ -339,6 +351,22 @@ pd.crosstab(flex_adata.obs['sample_id'], [
 
 ```{python}
 flex_adata.obs.value_counts(['total_counts_outlier', 'n_genes_by_counts_outlier', 'pct_counts_mt_outlier'])
+```
+
+### adding a step to assess if the cells with high mitochondrial genes (and therefore to be removed) are specifically immune or just a random sampling
+
+```{python}
+flex_adata.obs["high_mito"] = (
+    flex_adata.obs["pct_counts_mt"] > 25
+).map({True: "yes", False: "no"}).astype("category")
+
+flex_adata.obs["high_counts"] = (
+    flex_adata.obs["total_counts"] > 25
+).map({True: "yes", False: "no"}).astype("category")
+```
+
+```{python}
+sc.pl.dotplot(flex_adata,var_names =["PTPRC", "CD3D", "LYZ", "FCGR3A", "SFTPC", "AQP5", "CD34"], groupby ="high_mito", layer="counts", standard_scale="var")
 ```
 
 # FILTERING
@@ -610,7 +638,7 @@ proportions.to_csv("celltypist_foetal_lung_proportions.csv")
 
 # CLUSTERING
 ```{python}
- for res in [0.2,0.5,1,1.5,2]:
+ for res in [1,1.5,2]:
     sc.tl.leiden(flex_adata, key_added = "leiden_res_" + str(res), resolution = res)
 ```
 
@@ -624,9 +652,9 @@ flex_adata = sc.read_h5ad("flex_adata_clustered.h5ad")
 plt.figure(figsize=(10,10))
 sc.pl.umap(
     flex_adata,
-    color=["leiden_res_0.2", "leiden_res_0.5", "leiden_res_1",
+    color=["leiden_res_1",
      "leiden_res_1.5", "leiden_res_2"], 
-    size = 20, legend_fontsize="x-large", ncols=2, wspace=0.5
+    size = 20, legend_fontsize="x-large", ncols=1, wspace=0.5
 )
 plt.tight_layout()
 plt.savefig("clustering_resolutions.png", dpi=300, bbox_inches="tight")
@@ -721,6 +749,16 @@ sc.pl.umap(flex_adata, color=present, vmax="p99")
 ```
 
 ```{python}
+apoptosis_genes = [
+    "CASP3", "CASP6", "FAS", "MAP2K1", "NFKB1"
+]
+
+present = [g for g in apoptosis_genes if g in flex_adata.var_names]
+
+sc.pl.umap(flex_adata, color=present, vmax="p99")
+```
+
+```{python}
 sc.pl.umap(
     flex_adata,
     color=["pct_counts_mt", "pct_counts_hb", "total_counts", "doublet_score"], 
@@ -762,10 +800,42 @@ plt.tight_layout()
 plt.savefig("resolution_1_cluster_12_deg_dotplot.png", dpi=300, bbox_inches="tight")
 ```
 
+### compare cluster 12 to all else
+```{python}
+sc.tl.rank_genes_groups(flex_adata, groupby="leiden_res_1", method="wilcoxon", key_added="dea_12vRest", groups=["12"], reference="rest")
+```
+
+```{python}
+plt.figure(figsize=(15,10))
+sc.pl.rank_genes_groups_dotplot(
+    flex_adata, groupby="leiden_res_1", standard_scale="var", n_genes=10, key="dea_12vRest",
+)
+plt.tight_layout()
+plt.savefig("resolution_1_cluster_12_vs_rest_dotplot.png", dpi=300, bbox_inches="tight")
+```
+
 ### plot manually curated markers taken from publications
 ```{python}
 marker_genes = ["COL1A2", "KRT19", "AIF1", "SPI1", "CDH5", "CD247", "VPREB3", "DNAH12", "DLX1", "TPSD1", "PTPRC", "CD3D", "KLRB1", "CD8A", "CD4", "CD40LG", "GZMB", "CD79A", "CD68", "C1QA", "CD163", "FCGR3A", "CD14", "LYZ", "CD79A", "MS4A1", "MKI67"]
+immune_genes = ["PTPRC", "CD3D", "CD4", "CD8A", "NKG7", "GZMB", "LYZ", "CD14", "FCGR3A", "CD68", "CD1C", "CD79A"]
+
 ```
 ```{python}
-sc.pl.dotplot(flex_adata, var_names=marker_genes, groupby="leiden_res_2")
+plt.figure(figsize=(10,10))
+sc.pl.dotplot(flex_adata, var_names=immune_genes, groupby="leiden_res_1")
+plt.tight_layout()
+plt.savefig("resolution_1_immune_genes_dotplot.png", dpi=300, bbox_inches="tight")
+```
+
+### looking at just immune clusters to then compare processing methods
+```{python}
+immune_adata = flex_adata[flex_adata.obs["leiden_res_1"].isin(["15", "16"])].copy()
+immune_adata
+```
+
+```{python}
+plt.figure(figsize=(6,5))
+sc.pl.dotplot(immune_adata, var_names=immune_genes, groupby="sample_id")
+plt.tight_layout()
+plt.savefig("immune_clusters_expression_by_sample_dotplot.png", dpi=300, bbox_inches="tight")
 ```
