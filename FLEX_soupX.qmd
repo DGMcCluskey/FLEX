@@ -12,7 +12,8 @@ pool_ident <- c(
   "POMS_01Pool1LNSFunsort_G",
   "POMS_01Pool2LNSFFACSsort_G",
   "POMS_01Pool3LNCFunsort_G",
-  "POMS_01Pool4LNCFFACSsort_G"
+  "POMS_01Pool4LNCFFACSsort_G",
+  "POMS_01Pool2LNSF_G_1stpilot"
 )
 
 sample_ident <- c("BC001", "BC002", "BC003", "BC004")
@@ -81,7 +82,7 @@ soup_channels <- lapply(soup_channels, function(x) autoEstCont(x, tfidfMin = 0.2
 out <- lapply(soup_channels, function(x) adjustCounts(x))
 ```
 
-### look a genes that have been zeroed the most
+### look at genes that have been zeroed the most
 ```{r}
 mostZeroed_per_sample <- lapply(names(out), function(samp) {
   sc <- soup_channels[[samp]]
@@ -119,7 +120,7 @@ lapply(names(out), function(samp) {
 ```{r}
 library(ggplot2)
 
-samp <- "POMS_01Pool1LNSFunsort_G_BC004"  # pick one sample
+samp <- "POMS_01Pool2LNSF_G_1stpilot_BC003"  # pick one sample
 
 toc <- soup_channels[[samp]]$toc
 adj <- out[[samp]]

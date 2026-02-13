@@ -360,13 +360,16 @@ flex_adata.obs["high_mito"] = (
     flex_adata.obs["pct_counts_mt"] > 25
 ).map({True: "yes", False: "no"}).astype("category")
 
-flex_adata.obs["high_counts"] = (
-    flex_adata.obs["total_counts"] > 25
+flex_adata.obs["low_counts"] = (
+    flex_adata.obs["total_counts"] < 10
 ).map({True: "yes", False: "no"}).astype("category")
 ```
 
 ```{python}
+plt.figure(figsize=(10,5))
 sc.pl.dotplot(flex_adata,var_names =["PTPRC", "CD3D", "LYZ", "FCGR3A", "SFTPC", "AQP5", "CD34"], groupby ="high_mito", layer="counts", standard_scale="var")
+plt.tight_layout()
+plt.savefig("high_mito_phenotype.png", dpi=300, bbox_inches="tight")
 ```
 
 # FILTERING
@@ -805,6 +808,24 @@ plt.savefig("resolution_1_cluster_12_deg_dotplot.png", dpi=300, bbox_inches="tig
 sc.tl.rank_genes_groups(flex_adata, groupby="leiden_res_1", method="wilcoxon", key_added="dea_12vRest", groups=["12"], reference="rest")
 ```
 
+### compare 12 to two of the most dominant clusters with opposing expression
+
+```{python}
+subset = flex_adata[flex_adata.obs["leiden_res_1"].isin(["1", "5", "12"])].copy()
+
+sc.tl.rank_genes_groups(
+    subset,
+    groupby="leiden_res_1",
+    groups=["12"],
+    reference="rest",   # now rest = 1 + 5
+    method="wilcoxon",
+    key_added="dea_12v1and5"
+)
+sc.pl.rank_genes_groups_dotplot(
+    subset, groupby="leiden_res_1", standard_scale="var", n_genes=10, key="dea_12v1and5",
+)
+```
+
 ```{python}
 plt.figure(figsize=(15,10))
 sc.pl.rank_genes_groups_dotplot(
@@ -816,15 +837,15 @@ plt.savefig("resolution_1_cluster_12_vs_rest_dotplot.png", dpi=300, bbox_inches=
 
 ### plot manually curated markers taken from publications
 ```{python}
-marker_genes = ["COL1A2", "KRT19", "AIF1", "SPI1", "CDH5", "CD247", "VPREB3", "DNAH12", "DLX1", "TPSD1", "PTPRC", "CD3D", "KLRB1", "CD8A", "CD4", "CD40LG", "GZMB", "CD79A", "CD68", "C1QA", "CD163", "FCGR3A", "CD14", "LYZ", "CD79A", "MS4A1", "MKI67"]
+marker_genes = ["COL1A2", "KRT19", "AIF1", "SPI1", "CDH5", "CD247", "VPREB3", "DNAH12", "DLX1", "TPSD1", "PTPRC", "CD3D", "KLRB1", "CD8A", "CD4", "CD40LG", "GZMB", "CD79A", "CD68", "C1QA", "CD163", "FCGR3A", "CD14", "LYZ", "CD79A", "MS4A1", "MKI67", "CD93", "PECAM1", "HPGD", "ACE", "CFTR", "FOXI1", "ASCL3", "IGF1", "ITM2C", "KRT13", "KRT6A", "DSG3", "SERPINB2"]
 immune_genes = ["PTPRC", "CD3D", "CD4", "CD8A", "NKG7", "GZMB", "LYZ", "CD14", "FCGR3A", "CD68", "CD1C", "CD79A"]
 
 ```
 ```{python}
 plt.figure(figsize=(10,10))
-sc.pl.dotplot(flex_adata, var_names=immune_genes, groupby="leiden_res_1")
+sc.pl.dotplot(flex_adata, var_names=marker_genes, groupby="leiden_res_1")
 plt.tight_layout()
-plt.savefig("resolution_1_immune_genes_dotplot.png", dpi=300, bbox_inches="tight")
+plt.savefig("resolution_1_marker_genes_dotplot.png", dpi=300, bbox_inches="tight")
 ```
 
 ### looking at just immune clusters to then compare processing methods
