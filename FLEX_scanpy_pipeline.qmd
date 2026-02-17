@@ -139,7 +139,8 @@ pool_list = [
   "POMS_01Pool1LNSFunsort_G",
   "POMS_01Pool2LNSFFACSsort_G",
   "POMS_01Pool3LNCFunsort_G",
-  "POMS_01Pool4LNCFFACSsort_G"
+  "POMS_01Pool4LNCFFACSsort_G",
+  "POMS_01Pool2LNSF_G_1stpilot"
   ]
 
 sample_list = ["BC001", "BC002", "BC003", "BC004"]
@@ -152,6 +153,11 @@ for pool_id in pool_list:
     for sample_id in sample_list:
         print(sample_id)
         h5_path = soupx_path + pool_id + "_" + sample_id + '_soupx.h5'
+
+        if not os.path.exists(h5_path):
+            print("Skipping missing:", h5_path)
+            continue
+
         h5 = sc.read_10x_h5(h5_path)
         h5.obs['sample_id'] = sample_id
         h5.obs['pool_id'] = pool_id
@@ -216,17 +222,33 @@ flex_adata
 ```
 
 ### cleaning up sample and pool names
+### rename the 1st pilot samples to have different donor names as right now they are called BC001 and BC003, but they're different donors than the other BC001 and BC003!
 ```{python}
 pool_dict = {
     "POMS_01Pool1LNSFunsort_G" : "snapfrozen_unsorted",
     "POMS_01Pool2LNSFFACSsort_G" : "snapfrozen_sorted",
     "POMS_01Pool3LNCFunsort_G" : "chopfix_unsorted",
-    "POMS_01Pool4LNCFFACSsort_G" : "chopfix_sorted"
+    "POMS_01Pool4LNCFFACSsort_G" : "chopfix_sorted",
+    "POMS_01Pool2LNSF_G_1stpilot" : "snapfrozen_unsorted_1stpilot"
 }
 flex_adata.obs["pool_id"] = flex_adata.obs["pool_id"].map(pool_dict)
 flex_adata.obs["donor"] = flex_adata.obs["sample_id"]
+
+pilot_pool = "snapfrozen_unsorted_1stpilot"
+mask_001 = (
+    (flex_adata.obs['pool_id'] == pilot_pool) &
+    (flex_adata.obs['donor'] == 'BC001')
+)
+mask_003 = (
+    (flex_adata.obs['pool_id'] == pilot_pool) &
+    (flex_adata.obs['donor'] == 'BC003')
+)
+flex_adata.obs.loc[mask_001, 'donor'] = 'BC005'
+flex_adata.obs.loc[mask_003, 'donor'] = 'BC006'
+
 flex_adata.obs["sample_id"] = (flex_adata.obs["donor"].astype(str) + "_" + flex_adata.obs["pool_id"].astype(str))
 flex_adata.obs
+flex_adata.obs.groupby(['sample_id']).size()
 ```
 
 ### save object
@@ -255,7 +277,6 @@ for s in flex_adata.obs["sample_id"].unique():
         size=5
     )
 ```
-
 
 ### plotting number of cells per sample and the percentage mito genes
 ```{python}
@@ -327,6 +348,7 @@ plt.show()
 
 ```
 
+
 ```{python}
 cells_per_sample = flex_adata.obs['sample_id'].value_counts()
 plt.figure()
@@ -338,6 +360,8 @@ plt.xticks(rotation=90)
 plt.tight_layout()
 plt.savefig("total_counts.png", dpi=300, bbox_inches="tight")
 plt.show()
+
+cells_per_sample.to_csv("cells_per_sample_beofre_filter.csv")
 ```
 
 ```{python}
@@ -384,6 +408,9 @@ flex_adata = flex_adata[(flex_adata.obs['pct_counts_mt'] < 25) &
 ### check after filtering
 ```{python}
 sc.pl.violin(flex_adata, keys = ['total_counts', 'n_genes_by_counts', 'pct_counts_mt', "pct_counts_hb"], groupby = 'sample_id', rotation = 90, multi_panel = True)
+
+cells_per_sample = flex_adata.obs['sample_id'].value_counts()
+cells_per_sample.to_csv("cells_per_sample_after_filter.csv")
 ```
 
 # NORMALISATION
@@ -511,7 +538,7 @@ plt.savefig("UMAP_scvi_QC.png",dpi=300)
 
 ### subset singlets
 ### get some metrics for how many removed
-### note: 91,493 cells before subset and 71,540 afterwards
+### note: 95,828 cells before subset and 74,638 afterwards
 ```{python}
 doublet_table = pd.crosstab(flex_adata.obs['sample_id'], flex_adata.obs['doublet_class'])
 doublet_table.to_csv("doublet_counts_per_sample.csv")
@@ -589,7 +616,7 @@ plt.savefig("UMAP_scvi_celltypist.png",dpi=300, bbox_inches="tight")
 ```
 
 ```{python}
-sc.pl.umap(flex_adata, color=["celltypist_conf_score_foetal_lung_celltypist"], size=10, orde)
+sc.pl.umap(flex_adata, color=["celltypist_conf_score_foetal_lung_celltypist"], size=10)
 ```
 
 ```{python}
@@ -647,7 +674,7 @@ proportions.to_csv("celltypist_foetal_lung_proportions.csv")
 
 ### save/load point
 ```{python}
-#flex_adata.write_h5ad("flex_adata_clustered.h5")
+#flex_adata.write_h5ad("flex_adata_clustered.h5ad")
 flex_adata = sc.read_h5ad("flex_adata_clustered.h5ad")
 ```
 
@@ -691,7 +718,6 @@ def split_umap(adata, split_by, ncol=2, nrow=None, **kwargs):
 ```{python}
 plt.figure(figsize=(10,10))
 split_umap(flex_adata, color="donor", split_by="pool_id")
-C
 ```
 
 ### checking cell cycle genes
