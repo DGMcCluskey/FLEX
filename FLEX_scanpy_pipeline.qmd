@@ -582,7 +582,7 @@ sc.tl.umap(flex_adata)
 
 ```{python}
 plt.figure(figsize=(20,15))
-sc.pl.umap(flex_adata, color=["pool_id", "donor"], wspace=0.5,show=True, size=2)
+sc.pl.umap(flex_adata, color=["pool_id", "poms_id"], wspace=0.5,show=True, size=2)
 plt.tight_layout()
 plt.savefig("UMAP_scvi_singlets.png",dpi=300)
 ```
@@ -678,6 +678,43 @@ proportions.to_csv("celltypist_foetal_lung_proportions.csv")
 flex_adata = sc.read_h5ad("flex_adata_clustered.h5ad")
 ```
 
+### updating sample names now that I know who is who
+
+```{python}
+flex_adata.obs["poms_id"] = flex_adata.obs["donor"].map(
+    {
+        "BC001":"POMS074",
+        "BC002":"POMS075",
+        "BC003":"POMS076",
+        "BC004":"POMS078",
+        "BC005":"POMS025",
+        "BC006":"POMS051"
+    }
+)
+```
+
+```{python}
+flex_adata.obs["sample_id"] = (flex_adata.obs["poms_id"].astype(str) + "_" + flex_adata.obs["pool_id"].astype(str))
+flex_adata.obs
+flex_adata.obs.groupby(['sample_id']).size()
+```
+
+### make QC plots again with updated names
+```{python}
+cells_per_sample = flex_adata.obs[['sample_id', "poms_id"]].value_counts().reset_index()
+plt.figure(figsize=(10,5))
+sns.barplot(data=cells_per_sample,
+    x="sample_id",
+    y="count",
+    hue="poms_id"
+)
+plt.xticks(rotation=90)
+plt.tight_layout()
+plt.savefig("total_counts.png", dpi=300, bbox_inches="tight")
+plt.show()
+```
+
+
 ```{python}
 plt.figure(figsize=(10,10))
 sc.pl.umap(
@@ -716,8 +753,9 @@ def split_umap(adata, split_by, ncol=2, nrow=None, **kwargs):
 ```
 
 ```{python}
-plt.figure(figsize=(10,10))
-split_umap(flex_adata, color="donor", split_by="pool_id")
+plt.figure(figsize=(16,10))
+split_umap(flex_adata, color="poms_id", split_by="pool_id", ncol=3)
+plt.savefig("umap_split_donor_pool.png", dpi=300, bbox_inches="tight")
 ```
 
 ### checking cell cycle genes
@@ -757,11 +795,13 @@ sc.tl.score_genes_cell_cycle(
 ```
 
 ```{python}
+plt.figure(figsize=(20,10))
 sc.pl.umap(
     flex_adata,
     color=["S_score", "G2M_score", "phase"],size=20,
     cmap="viridis"
 )
+plt.savefig("umap_cell_cycle_score.png", dpi=300, bbox_inches="tight")
 ```
 
 ### checking stress genes
@@ -788,11 +828,13 @@ sc.pl.umap(flex_adata, color=present, vmax="p99")
 ```
 
 ```{python}
+plt.figure(figsize=(12,10))
 sc.pl.umap(
     flex_adata,
     color=["pct_counts_mt", "pct_counts_hb", "total_counts", "doublet_score"], 
     size = 20, legend_fontsize="x-large", ncols=2
 )
+plt.savefig("umap_qc_plots.png", dpi=300, bbox_inches="tight")
 ```
 
 ### assess the "mass" cluster for QC metrics (cluster 12 on resolution 1)
@@ -805,8 +847,8 @@ plt.savefig("heatmap_cluster_qc.png", dpi=300, bbox_inches="tight")
 ```
 
 ```{python}
-plt.figure(figsize=(15,20))
-sc.pl.violin(flex_adata, keys=["log1p_total_counts"], groupby="leiden_res_1", stripplot=False)
+fig, ax = plt.subplots(figsize=(10,5))
+sc.pl.violin(flex_adata, ax=ax, keys=["log1p_total_counts"], groupby="leiden_res_1", stripplot=False, show=False)
 plt.tight_layout()
 plt.savefig("cluster_total_counts_violin_qc.png", dpi=300, bbox_inches="tight")
 ```
@@ -869,14 +911,14 @@ immune_genes = ["PTPRC", "CD3D", "CD4", "CD8A", "NKG7", "GZMB", "LYZ", "CD14", "
 ```
 ```{python}
 plt.figure(figsize=(10,10))
-sc.pl.dotplot(flex_adata, var_names=marker_genes, groupby="leiden_res_1")
+sc.pl.dotplot(flex_adata, var_names=immune_genes, groupby="leiden_res_1")
 plt.tight_layout()
-plt.savefig("resolution_1_marker_genes_dotplot.png", dpi=300, bbox_inches="tight")
+plt.savefig("resolution_1_immune_genes_dotplot.png", dpi=300, bbox_inches="tight")
 ```
 
 ### looking at just immune clusters to then compare processing methods
 ```{python}
-immune_adata = flex_adata[flex_adata.obs["leiden_res_1"].isin(["15", "16"])].copy()
+immune_adata = flex_adata[flex_adata.obs["leiden_res_1"].isin(["16", "18"])].copy()
 immune_adata
 ```
 
@@ -886,3 +928,4 @@ sc.pl.dotplot(immune_adata, var_names=immune_genes, groupby="sample_id")
 plt.tight_layout()
 plt.savefig("immune_clusters_expression_by_sample_dotplot.png", dpi=300, bbox_inches="tight")
 ```
+
