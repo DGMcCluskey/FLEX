@@ -929,3 +929,16 @@ plt.tight_layout()
 plt.savefig("immune_clusters_expression_by_sample_dotplot.png", dpi=300, bbox_inches="tight")
 ```
 
+### plot all cluster degs
+```{python}
+plt.figure(figsize=(20,5))
+dp = sc.pl.rank_genes_groups_dotplot(
+    flex_adata, groupby="leiden_res_1", standard_scale="var", n_genes=5, key="dea_leiden_1",show=False
+)
+ax = dp["mainplot_ax"]   # ← this is the real axis
+ax.tick_params(axis="x", labelsize=20)
+ax.tick_params(axis="y", labelsize=20)
+
+plt.tight_layout()
+plt.savefig("leiden_res_1_degs_dotplot.png", dpi=300, bbox_inches="tight")
+```
