@@ -672,7 +672,7 @@ proportions.to_csv("celltypist_foetal_lung_proportions.csv")
     sc.tl.leiden(flex_adata, key_added = "leiden_res_" + str(res), resolution = res)
 ```
 
-### save/load point
+# SAVE/LOAD POINT
 ```{python}
 #flex_adata.write_h5ad("flex_adata_clustered.h5ad")
 flex_adata = sc.read_h5ad("flex_adata_clustered.h5ad")
