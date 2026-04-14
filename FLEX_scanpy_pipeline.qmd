@@ -244,7 +244,7 @@ flex_adata.obs["prep_type"] = flex_adata.obs["pool_id"].map(prep_dict)
 flex_adata.obs["donor"] = flex_adata.obs["sample_id"]
 flex_adata.obs["sample_id"] = flex_adata.obs["sample_id2"]
 
-sample_dict = {
+poms_dict = {
     "BC001_POMS_01Pool1LNSFunsort_G" : "POMS_074",
     "BC001_POMS_01Pool2LNSFFACSsort_G" : "POMS_074",
     "BC001_POMS_01Pool2LNSF_G_1stpilot" : "POMS_025",
@@ -278,8 +278,9 @@ sample_dict = {
 
 }
 
+flex_adata.obs["poms_id"] = flex_adata.obs["sample_id"].map(poms_dict)
 flex_adata.obs
-flex_adata.obs.groupby(['sample_id']).size()
+flex_adata.obs.groupby(['poms_id']).size()
 ```
 
 ```{python}
@@ -439,11 +440,22 @@ plt.tight_layout()
 plt.savefig("high_mito_phenotype.png", dpi=300, bbox_inches="tight")
 ```
 
-# FILTERING
-### removing cells with more than 25% mito counts, less than 10 counts and less than 10 unique genes
+### checking total counts per sample as the plot has some samples with very low, so want exact numbers
 ```{python}
-flex_adata = flex_adata[(flex_adata.obs['pct_counts_mt'] < 25) & 
-    (flex_adata.obs['total_counts'] > 10) & 
+counts = (
+    flex_adata.obs
+    .groupby('sample_id')['total_counts']
+    .sum()
+    .reset_index()
+)
+```
+
+
+# FILTERING
+### removing cells with more than 20% mito counts, less than 100 counts and less than 10 unique genes
+```{python}
+flex_adata = flex_adata[(flex_adata.obs['pct_counts_mt'] < 20) & 
+    (flex_adata.obs['total_counts'] > 100) & 
     (flex_adata.obs['n_genes_by_counts'] > 10) &
     (flex_adata.obs['pct_counts_hb'] < 10), :]
 ```
@@ -487,7 +499,7 @@ sc.pp.highly_variable_genes(
     flex_adata, 
     n_top_genes=2000, 
     flavor="cell_ranger", 
-    batch_key='sample_id', 
+    batch_key='pool_id', 
     layer = 'logcounts',
     subset = False
 )
@@ -519,7 +531,7 @@ sc.tl.umap(flex_adata, random_state=2025)
 
 ```{python}
 plt.figure(figsize=(20,15))
-sc.pl.umap(flex_adata, color=["pool_id", "donor"], wspace=0.5,show=True, size = 2)
+sc.pl.umap(flex_adata, color=["pool_id", "poms_id"], wspace=0.5,show=True, size = 2)
 plt.tight_layout()
 plt.savefig("UMAP_uncorrected.png",dpi=300)
 ```
@@ -536,7 +548,7 @@ flex_hvg
 
 ```{python}
 import scvi
-scvi.model.SCVI.setup_anndata(flex_hvg, layer="counts", batch_key="sample_id")
+scvi.model.SCVI.setup_anndata(flex_hvg, layer="counts", batch_key="pool_id")
 flex_hvg
 model_scvi = scvi.model.SCVI(flex_hvg)
 model_scvi
@@ -564,7 +576,7 @@ sc.tl.umap(flex_adata)
 
 ```{python}
 plt.figure(figsize=(20,15))
-sc.pl.umap(flex_adata, color=["pool_id", "donor"], wspace=0.5,show=True, size=2)
+sc.pl.umap(flex_adata, color=["pool_id", "poms_id"], wspace=0.5,show=True, size=2)
 plt.tight_layout()
 plt.savefig("UMAP_scvi.png",dpi=300)
 ```
@@ -581,7 +593,7 @@ plt.savefig("UMAP_scvi_QC.png",dpi=300)
 
 ### subset singlets
 ### get some metrics for how many removed
-### note: 95,828 cells before subset and 74,638 afterwards
+### note: 117,773 cells before subset and 93,668 afterwards
 ```{python}
 doublet_table = pd.crosstab(flex_adata.obs['sample_id'], flex_adata.obs['doublet_class'])
 doublet_table.to_csv("doublet_counts_per_sample.csv")
@@ -595,7 +607,7 @@ sc.pp.highly_variable_genes(
     flex_adata, 
     n_top_genes=2000, 
     flavor="cell_ranger", 
-    batch_key='sample_id', 
+    batch_key='pool_id', 
     layer = 'logcounts',
     subset = False
 )
@@ -604,7 +616,7 @@ flex_hvg
 ```
 
 ```{python}
-scvi.model.SCVI.setup_anndata(flex_hvg, layer="counts", batch_key="sample_id")
+scvi.model.SCVI.setup_anndata(flex_hvg, layer="counts", batch_key="pool_id")
 flex_hvg
 model_scvi = scvi.model.SCVI(flex_hvg)
 model_scvi
