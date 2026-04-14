@@ -13,7 +13,10 @@ pool_ident <- c(
   "POMS_01Pool2LNSFFACSsort_G",
   "POMS_01Pool3LNCFunsort_G",
   "POMS_01Pool4LNCFFACSsort_G",
-  "POMS_01Pool2LNSF_G_1stpilot"
+  "POMS_01Pool2LNSF_G_1stpilot",
+  "POMS_01Pool6LN_G",
+  "POMS_01Pool7LN_G",
+  "POMS_01Pool8LN_G"
 )
 
 sample_ident <- c("BC001", "BC002", "BC003", "BC004")
@@ -120,7 +123,7 @@ lapply(names(out), function(samp) {
 ```{r}
 library(ggplot2)
 
-samp <- "POMS_01Pool2LNSF_G_1stpilot_BC003"  # pick one sample
+samp <- "POMS_01Pool8LN_G_BC001"  # pick one sample
 
 toc <- soup_channels[[samp]]$toc
 adj <- out[[samp]]

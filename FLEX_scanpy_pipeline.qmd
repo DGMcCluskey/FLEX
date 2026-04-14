@@ -140,7 +140,10 @@ pool_list = [
   "POMS_01Pool2LNSFFACSsort_G",
   "POMS_01Pool3LNCFunsort_G",
   "POMS_01Pool4LNCFFACSsort_G",
-  "POMS_01Pool2LNSF_G_1stpilot"
+  "POMS_01Pool2LNSF_G_1stpilot",
+  "POMS_01Pool6LN_G",
+  "POMS_01Pool7LN_G",
+  "POMS_01Pool8LN_G"
   ]
 
 sample_list = ["BC001", "BC002", "BC003", "BC004"]
@@ -224,29 +227,23 @@ flex_adata
 ### cleaning up sample and pool names
 ### rename the 1st pilot samples to have different donor names as right now they are called BC001 and BC003, but they're different donors than the other BC001 and BC003!
 ```{python}
-pool_dict = {
+prep_dict = {
     "POMS_01Pool1LNSFunsort_G" : "snapfrozen_unsorted",
     "POMS_01Pool2LNSFFACSsort_G" : "snapfrozen_sorted",
     "POMS_01Pool3LNCFunsort_G" : "chopfix_unsorted",
     "POMS_01Pool4LNCFFACSsort_G" : "chopfix_sorted",
-    "POMS_01Pool2LNSF_G_1stpilot" : "snapfrozen_unsorted_1stpilot"
+    "POMS_01Pool2LNSF_G_1stpilot" : "snapfrozen_unsorted_1stpilot",
+    "POMS_01Pool6_G" : "chopfix_unsorted",
+    "POMS_01Pool7_G" : "snapfrozen_unsorted",
+    "POMS_01Pool8_G" : "snapfrozen_unsorted",
 }
-flex_adata.obs["pool_id"] = flex_adata.obs["pool_id"].map(pool_dict)
+
+flex_adata.obs["sample_id2"] = (flex_adata.obs["sample_id"].astype(str) + "_" + flex_adata.obs["pool_id"].astype(str))
+
+flex_adata.obs["prep_type"] = flex_adata.obs["pool_id"].map(prep_dict)
 flex_adata.obs["donor"] = flex_adata.obs["sample_id"]
+flex_adata.obs["sample_id"] = flex_adata.obs["sample_id2"]
 
-pilot_pool = "snapfrozen_unsorted_1stpilot"
-mask_001 = (
-    (flex_adata.obs['pool_id'] == pilot_pool) &
-    (flex_adata.obs['donor'] == 'BC001')
-)
-mask_003 = (
-    (flex_adata.obs['pool_id'] == pilot_pool) &
-    (flex_adata.obs['donor'] == 'BC003')
-)
-flex_adata.obs.loc[mask_001, 'donor'] = 'BC005'
-flex_adata.obs.loc[mask_003, 'donor'] = 'BC006'
-
-flex_adata.obs["sample_id"] = (flex_adata.obs["donor"].astype(str) + "_" + flex_adata.obs["pool_id"].astype(str))
 flex_adata.obs
 flex_adata.obs.groupby(['sample_id']).size()
 ```
@@ -906,7 +903,7 @@ plt.savefig("resolution_1_cluster_12_vs_rest_dotplot.png", dpi=300, bbox_inches=
 ### plot manually curated markers taken from publications
 ```{python}
 marker_genes = ["COL1A2", "KRT19", "AIF1", "SPI1", "CDH5", "CD247", "VPREB3", "DNAH12", "DLX1", "TPSD1", "PTPRC", "CD3D", "KLRB1", "CD8A", "CD4", "CD40LG", "GZMB", "CD79A", "CD68", "C1QA", "CD163", "FCGR3A", "CD14", "LYZ", "CD79A", "MS4A1", "MKI67", "CD93", "PECAM1", "HPGD", "ACE", "CFTR", "FOXI1", "ASCL3", "IGF1", "ITM2C", "KRT13", "KRT6A", "DSG3", "SERPINB2"]
-immune_genes = ["PTPRC", "CD3D", "CD4", "CD8A", "NKG7", "GZMB", "LYZ", "CD14", "FCGR3A", "CD68", "CD1C", "CD79A"]
+immune_genes = ["PTPRC", "CD3D", "CD4", "CD8A", "NKG7", "GZMB", "LYZ", "CD14", "FCGR3A", "CD68", "CD1C", "CD79A", "SIGLEC8", "CLC", "IL5RA", "CCR3"]
 
 ```
 ```{python}
