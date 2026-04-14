@@ -244,6 +244,40 @@ flex_adata.obs["prep_type"] = flex_adata.obs["pool_id"].map(prep_dict)
 flex_adata.obs["donor"] = flex_adata.obs["sample_id"]
 flex_adata.obs["sample_id"] = flex_adata.obs["sample_id2"]
 
+sample_dict = {
+    "BC001_POMS_01Pool1LNSFunsort_G" : "POMS_074",
+    "BC001_POMS_01Pool2LNSFFACSsort_G" : "POMS_074",
+    "BC001_POMS_01Pool2LNSF_G_1stpilot" : "POMS_025",
+    "BC001_POMS_01Pool3LNCFunsort_G" : "POMS_074",
+    "BC001_POMS_01Pool4LNCFFACSsort_G" : "POMS_074",
+    "BC001_POMS_01Pool6LN_G" : "POMS_074",
+    "BC001_POMS_01Pool7LN_G" : "POMS_053",
+    "BC001_POMS_01Pool8LN_G" : "POMS_020",
+    "BC002_POMS_01Pool1LNSFunsort_G" : "POMS_075",
+    "BC002_POMS_01Pool2LNSFFACSsort_G" : "POMS_075",
+    "BC002_POMS_01Pool3LNCFunsort_G" : "POMS_075",
+    "BC002_POMS_01Pool4LNCFFACSsort_G" : "POMS_075",
+    "BC002_POMS_01Pool6LN_G" : "POMS_077",
+    "BC002_POMS_01Pool7LN_G" : "POMS_054",
+    "BC002_POMS_01Pool8LN_G" : "POMS_038",
+    "BC003_POMS_01Pool1LNSFunsort_G" : "POMS_076",
+    "BC003_POMS_01Pool2LNSFFACSsort_G" : "POMS_076",
+    "BC003_POMS_01Pool2LNSF_G_1stpilot" : "POMS_025",
+    "BC003_POMS_01Pool3LNCFunsort_G" : "POMS_076",
+    "BC003_POMS_01Pool4LNCFFACSsort_G" : "POMS_076",
+    "BC003_POMS_01Pool6LN_G" : "POMS_082",
+    "BC003_POMS_01Pool7LN_G" : "POMS_062",
+    "BC003_POMS_01Pool8LN_G" : "POMS_039",
+    "BC004_POMS_01Pool1LNSFunsort_G" : "POMS_078",
+    "BC004_POMS_01Pool2LNSFFACSsort_G" : "POMS_078",
+    "BC004_POMS_01Pool3LNCFunsort_G" : "POMS_078",
+    "BC004_POMS_01Pool4LNCFFACSsort_G" : "POMS_078",
+    "BC004_POMS_01Pool6LN_G" : "POMS_089",
+    "BC004_POMS_01Pool7LN_G" : "POMS_063",
+    "BC004_POMS_01Pool8LN_G" : "POMS_048",
+
+}
+
 flex_adata.obs
 flex_adata.obs.groupby(['sample_id']).size()
 ```
