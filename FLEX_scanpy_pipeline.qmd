@@ -262,7 +262,7 @@ poms_dict = {
     "BC002_POMS_01Pool8LN_G" : "POMS_038",
     "BC003_POMS_01Pool1LNSFunsort_G" : "POMS_076",
     "BC003_POMS_01Pool2LNSFFACSsort_G" : "POMS_076",
-    "BC003_POMS_01Pool2LNSF_G_1stpilot" : "POMS_025",
+    "BC003_POMS_01Pool2LNSF_G_1stpilot" : "POMS_051",
     "BC003_POMS_01Pool3LNCFunsort_G" : "POMS_076",
     "BC003_POMS_01Pool4LNCFFACSsort_G" : "POMS_076",
     "BC003_POMS_01Pool6LN_G" : "POMS_082",
@@ -643,7 +643,7 @@ plt.savefig("UMAP_scvi_singlets.png",dpi=300)
 ```
 
 ```{python}
-plt.figure(figsize=(20,15))
+plt.figure(figsize=(20,))
 sc.pl.umap(flex_adata, color=["pct_counts_mt", "pct_counts_hb", "total_counts"])
 plt.tight_layout()
 plt.savefig("UMAP_scvi_QC_singlets.png",dpi=300)
@@ -735,20 +735,23 @@ flex_adata = sc.read_h5ad("flex_adata_clustered.h5ad")
 
 
 ### make QC plots again with updated names
+
 ```{python}
 cells_per_sample = flex_adata.obs[["poms_id"]].value_counts().reset_index()
+cells_per_sample["logcount"] = np.log10(cells_per_sample["count"])
 plt.figure(figsize=(10,5))
-sns.barplot(data=cells_per_sample,
-    x="poms_id",
-    y="count",
-    hue="poms_id"
-)
-plt.xticks(rotation=90)
-plt.tight_layout()
-plt.savefig("total_counts.png", dpi=300, bbox_inches="tight")
-plt.show()
-```
+ax = sns.barplot(data=cells_per_sample, x="poms_id", y="count")
 
+#ax.set_yscale("log")
+
+for container in ax.containers:
+    ax.bar_label(container, fmt="%.0f")
+
+plt.xticks(rotation=45)
+plt.tight_layout()
+plt.show()
+plt.savefig("cell_counts_by_donor_after_QC.png", dpi=300, bbox_inches="tight")
+```
 
 ```{python}
 plt.figure(figsize=(10,10))
@@ -915,8 +918,128 @@ age_dict = {
  "POMS_020" : 25.4,
  "POMS_038" : 20.1,
  "POMS_039" : 27.6,
- "POMS_048" : 24.2 
+ "POMS_048" : 24.2,
+ "POMS_025" : 34.2,
+ "POMS_075" : 33.5,
+ "POMS_076" : 27.2,
+ "POMS_078" : 32.4 
 }
 
 flex_adata.obs["gestation"] = flex_adata.obs["poms_id"].map(age_dict)
+```
+
+```{python}
+age_bin_dict = {
+ "POMS_074" : "<24pcw",
+ "POMS_077" : "<24pcw",
+ "POMS_082" : ">30pcw",
+ "POMS_089" : ">30pcw",
+ "POMS_053" : "<24pcw",
+ "POMS_054" : "<24pcw",
+ "POMS_062" : ">30pcw",
+ "POMS_063" : "24-30pcw",
+ "POMS_020" : "24-30pcw",
+ "POMS_038" : "<24pcw",
+ "POMS_039" : "24-30pcw",
+ "POMS_048" : "24-30pcw",
+ "POMS_025" : ">30pcw",
+ "POMS_075" : ">30pcw",
+ "POMS_076" : "24-30pcw",
+ "POMS_078" : ">30pcw" 
+}
+
+flex_adata.obs["gestation_bin"] = flex_adata.obs["poms_id"].map(age_bin_dict)
+```
+```{python}
+sc.pl.umap(flex_adata, color = "gestation_bin")
+```
+
+### celltypist proportions by gestational age
+
+```{python}
+flex_adata.obs["gestation_bin"] = flex_adata.obs["gestation_bin"].cat.reorder_categories(["<24pcw", "24-30pcw", ">30pcw"])
+```
+
+```{python}
+counts = (
+    flex_adata.obs
+    .groupby(["gestation_bin", "celltypist_label_foetal_lung_celltypist"])
+    .size()
+    .unstack(fill_value=0)
+)
+
+# convert to proportions
+proportions = counts.div(counts.sum(axis=1), axis=0)
+proportions = proportions * 100
+```
+
+```{python}
+palette = flex_adata.uns["celltypist_label_foetal_lung_celltypist_colors"]
+celltype_order = flex_adata.obs["celltypist_label_foetal_lung_celltypist"].cat.categories
+proportions = proportions[celltype_order]
+
+proportions.plot(
+    kind="bar",
+    stacked=True,
+    color = palette,
+    figsize=(10, 6)
+)
+
+plt.ylabel("Proportion of cells")
+plt.xlabel("Sample")
+plt.legend(
+    title="Cell type",
+    bbox_to_anchor=(1.05, 1),
+    loc="upper left"
+)
+plt.tight_layout()
+plt.savefig("Celltypist_proportions_by_gestation_bin.png", dpi=300, bbox_inches="tight")
+plt.show()
+```
+
+### will also plot specific populations, but each donor is represented
+```{python}
+counts = (
+    flex_adata.obs
+    .groupby(["poms_id", "celltypist_label_foetal_lung_celltypist"])
+    .size()
+    .unstack(fill_value=0)
+)
+
+proportions = counts.div(counts.sum(axis=1), axis=0) * 100
+
+proportions["gestation_bin"] = (
+    flex_adata.obs
+    .drop_duplicates("poms_id")
+    .set_index("poms_id")["gestation_bin"]
+)
+```
+
+```{python}
+celltype = "AT1"
+
+df = proportions[[celltype, "gestation_bin"]].reset_index()
+
+plt.figure(figsize=(6,5))
+sns.stripplot(
+    data=df,
+    x="gestation_bin",
+    y=celltype,
+    color = "black",
+    jitter=True
+)
+
+sns.boxplot(
+    data=df,
+    x="gestation_bin",
+    y=celltype,
+    showcaps=True,
+    showfliers=False,
+    hue="gestation_bin",
+    palette = ["indianred", "mediumvioletred", "cornflowerblue"]
+)
+
+plt.ylabel(f"% {celltype}")
+plt.tight_layout()
+plt.show()
 ```
