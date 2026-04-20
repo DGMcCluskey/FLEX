@@ -922,10 +922,11 @@ age_dict = {
  "POMS_038" : 20.1,
  "POMS_039" : 27.6,
  "POMS_048" : 24.2,
- "POMS_025" : 34.2,
- "POMS_075" : 33.5,
- "POMS_076" : 27.2,
- "POMS_078" : 32.4 
+ "POMS_025" : 32.2,
+ "POMS_075" : 31.5,
+ "POMS_076" : 25.2,
+ "POMS_078" : 30.4,
+ "POMS_051" : 
 }
 
 flex_adata.obs["gestation"] = flex_adata.obs["poms_id"].map(age_dict)
@@ -948,7 +949,8 @@ age_bin_dict = {
  "POMS_025" : ">30pcw",
  "POMS_075" : ">30pcw",
  "POMS_076" : "24-30pcw",
- "POMS_078" : ">30pcw" 
+ "POMS_078" : ">30pcw",
+ "POMS_051" :  
 }
 
 flex_adata.obs["gestation_bin"] = flex_adata.obs["poms_id"].map(age_bin_dict)
@@ -1026,10 +1028,14 @@ proportions["gestation"] = (
 proportions["gestation"] = pd.to_numeric(proportions["gestation"], errors="coerce")
 ```
 
+### plotting longitudinally (un-binned)
+### removing POMS_089 as this is the same with 2 cells and thus unreliable
 ```{python}
-celltype = "Pericyte"
+celltype = "AT1"
 
 df = proportions[[celltype, "gestation_bin", "gestation"]].reset_index()
+
+df = df.query("poms_id != 'POMS_089'")
 
 plt.figure(figsize=(4,5))
 sns.stripplot(
@@ -1066,7 +1072,8 @@ plt.tight_layout()
 plt.savefig(f"{celltype}_proportions_by_gestation.png", dpi=300, bbox_inches="tight")
 plt.show()
 
+```
 
-
+```{python}
 
 ```
