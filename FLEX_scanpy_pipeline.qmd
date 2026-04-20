@@ -681,7 +681,7 @@ sc.pl.umap(flex_adata, color=["CD3D", "LYZ", "CD79A", "SFTPC", "AGER", "FOXJ1"],
 ```{python}
 counts = (
     flex_adata.obs
-    .groupby(["sample_id", "celltypist_label_foetal_lung_celltypist"])
+    .groupby(["poms_id", "celltypist_label_foetal_lung_celltypist"])
     .size()
     .unstack(fill_value=0)
 )
@@ -713,7 +713,7 @@ plt.legend(
     loc="upper left"
 )
 plt.tight_layout()
-plt.savefig("Celltypist_proportions.png", dpi=300, bbox_inches="tight")
+plt.savefig("Celltypist_proportions_poms_id.png", dpi=300, bbox_inches="tight")
 plt.show()
 ```
 
@@ -791,8 +791,8 @@ def split_umap(adata, split_by, ncol=2, nrow=None, **kwargs):
 ```
 
 ```{python}
-plt.figure(figsize=(16,10))
-split_umap(flex_adata, color="poms_id", split_by="pool_id", ncol=3)
+plt.figure(figsize=(20,10))
+split_umap(flex_adata, color="poms_id", split_by="pool_id", ncol=3, size = 10)
 plt.savefig("umap_split_donor_pool.png", dpi=300, bbox_inches="tight")
 ```
 
@@ -833,11 +833,11 @@ sc.tl.score_genes_cell_cycle(
 ```
 
 ```{python}
-plt.figure(figsize=(20,10))
+plt.figure(figsize=(10,20))
 sc.pl.umap(
     flex_adata,
-    color=["S_score", "G2M_score", "phase"],size=20,
-    cmap="viridis"
+    color=["S_score", "G2M_score", "phase"],size=10,
+    cmap="viridis", ncols =1
 )
 plt.savefig("umap_cell_cycle_score.png", dpi=300, bbox_inches="tight")
 ```
@@ -851,8 +851,9 @@ stress_genes = [
 ]
 
 present = [g for g in stress_genes if g in flex_adata.var_names]
-
-sc.pl.umap(flex_adata, color=present, vmax="p99")
+plt.figure(figsize=(12,10))
+sc.pl.umap(flex_adata, color=present, size=10)
+plt.savefig("umap_stress_genes.png", dpi=300, bbox_inches="tight")
 ```
 
 ```{python}
@@ -862,7 +863,9 @@ apoptosis_genes = [
 
 present = [g for g in apoptosis_genes if g in flex_adata.var_names]
 
-sc.pl.umap(flex_adata, color=present, vmax="p99")
+plt.figure(figsize=(12,10))
+sc.pl.umap(flex_adata, color=present, size = 10, ncols=2)
+plt.savefig("umap_apoptosis_genes.png", dpi=300, bbox_inches="tight")
 ```
 
 ```{python}
@@ -1013,14 +1016,22 @@ proportions["gestation_bin"] = (
     .drop_duplicates("poms_id")
     .set_index("poms_id")["gestation_bin"]
 )
+
+proportions["gestation"] = (
+    flex_adata.obs
+    .drop_duplicates("poms_id")
+    .set_index("poms_id")["gestation"]
+)
+
+proportions["gestation"] = pd.to_numeric(proportions["gestation"], errors="coerce")
 ```
 
 ```{python}
-celltype = "AT1"
+celltype = "Pericyte"
 
-df = proportions[[celltype, "gestation_bin"]].reset_index()
+df = proportions[[celltype, "gestation_bin", "gestation"]].reset_index()
 
-plt.figure(figsize=(6,5))
+plt.figure(figsize=(4,5))
 sns.stripplot(
     data=df,
     x="gestation_bin",
@@ -1041,5 +1052,21 @@ sns.boxplot(
 
 plt.ylabel(f"% {celltype}")
 plt.tight_layout()
+plt.savefig(f"{celltype}_proportions_by_gestation_bin.png", dpi=300, bbox_inches="tight")
 plt.show()
+
+
+plt.figure(figsize=(6,5))
+sns.regplot(data=df,
+x = "gestation",
+y=celltype,
+lowess=True)
+plt.ylabel(f"% {celltype}")
+plt.tight_layout()
+plt.savefig(f"{celltype}_proportions_by_gestation.png", dpi=300, bbox_inches="tight")
+plt.show()
+
+
+
+
 ```
