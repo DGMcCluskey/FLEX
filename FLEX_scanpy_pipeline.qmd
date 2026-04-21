@@ -926,7 +926,7 @@ age_dict = {
  "POMS_075" : 31.5,
  "POMS_076" : 25.2,
  "POMS_078" : 30.4,
- "POMS_051" : 
+ "POMS_051" : 24.2
 }
 
 flex_adata.obs["gestation"] = flex_adata.obs["poms_id"].map(age_dict)
@@ -950,7 +950,7 @@ age_bin_dict = {
  "POMS_075" : ">30pcw",
  "POMS_076" : "24-30pcw",
  "POMS_078" : ">30pcw",
- "POMS_051" :  
+ "POMS_051" : "24-30pcw"
 }
 
 flex_adata.obs["gestation_bin"] = flex_adata.obs["poms_id"].map(age_bin_dict)
@@ -962,7 +962,11 @@ sc.pl.umap(flex_adata, color = "gestation_bin")
 ### celltypist proportions by gestational age
 
 ```{python}
-flex_adata.obs["gestation_bin"] = flex_adata.obs["gestation_bin"].cat.reorder_categories(["<24pcw", "24-30pcw", ">30pcw"])
+flex_adata.obs["gestation_bin"] = (
+    flex_adata.obs["gestation_bin"]
+    .astype("category")
+    .cat.reorder_categories(["<24pcw", "24-30pcw", ">30pcw"], ordered=True)
+)
 ```
 
 ```{python}
@@ -1031,7 +1035,7 @@ proportions["gestation"] = pd.to_numeric(proportions["gestation"], errors="coerc
 ### plotting longitudinally (un-binned)
 ### removing POMS_089 as this is the same with 2 cells and thus unreliable
 ```{python}
-celltype = "AT1"
+celltype = "CD4 T"
 
 df = proportions[[celltype, "gestation_bin", "gestation"]].reset_index()
 
