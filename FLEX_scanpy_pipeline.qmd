@@ -955,6 +955,14 @@ age_bin_dict = {
 
 flex_adata.obs["gestation_bin"] = flex_adata.obs["poms_id"].map(age_bin_dict)
 ```
+
+# SAVE AGAIN WITH NEW INFO
+```{python}
+#flex_adata.write_h5ad("flex_adata_clustered.h5ad")
+flex_adata = sc.read_h5ad("flex_adata_clustered.h5ad")
+```
+
+
 ```{python}
 sc.pl.umap(flex_adata, color = "gestation_bin")
 ```
@@ -1035,11 +1043,11 @@ proportions["gestation"] = pd.to_numeric(proportions["gestation"], errors="coerc
 ### plotting longitudinally (un-binned)
 ### removing POMS_089 as this is the same with 2 cells and thus unreliable
 ```{python}
-celltype = "CD4 T"
+celltype = "Alveolar fibro"
 
 df = proportions[[celltype, "gestation_bin", "gestation"]].reset_index()
 
-df = df.query("poms_id != 'POMS_089'")
+df = df.query("poms_id not in ['POMS_089', 'POMS_020', 'POMS_039', 'POMS_048']")
 
 plt.figure(figsize=(4,5))
 sns.stripplot(
