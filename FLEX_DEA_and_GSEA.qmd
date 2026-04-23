@@ -77,5 +77,19 @@ dc.pp.filter_samples(pdata, min_cells=10, min_counts=1000)
 ```
 
 ```{python}
+dds = DeseqDataSet(
+    adata=pdata,
+    design_factors=["gestation_bin", "sex"],
+    refit_cooks=True,
+    inference=inference,
+)
 
+# Compute LFCs
+dds.deseq2()
+
+# Extract contrast between conditions
+stat_res = DeseqStats(dds, contrast=["disease", "COVID-19", "normal"], inference=inference)
+
+# Compute Wald test
+stat_res.summary()
 ```
