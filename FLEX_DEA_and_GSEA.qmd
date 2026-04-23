@@ -1,0 +1,81 @@
+---
+title: "Untitled"
+format: html
+---
+
+
+```{python}
+import os
+import re
+import sys
+import scanpy as sc
+import matplotlib.pyplot as plt
+import pandas as pd
+import numpy as np
+import seaborn as sns
+import anndata as ad
+from scipy.stats import median_abs_deviation
+import decoupler as dc
+```
+
+```{python}
+print(sys.executable)
+```
+
+```{python}
+flex_adata = sc.read_h5ad("flex_adata_clustered.h5ad")
+```
+
+```{python}
+sc.pl.umap(flex_adata, color = "COL3A1")
+```
+
+```{python}
+sc.pl.violin(flex_adata, keys = "COL3A1", groupby = "poms_id", layer = "X")
+```
+
+### pseudobulk samples
+```{python}
+pdata = dc.pp.pseudobulk(
+    adata=flex_adata,
+    sample_col="poms_id",
+    groups_col="celltypist_label_foetal_lung_celltypist",
+    mode="sum",
+    layer="counts",
+    skip_checks=True
+)
+```
+
+### remove samples with low cell counts
+### ~ symbold inverses (so allows me to remove these samples rather than keep)
+```{python}
+samples = ["POMS_089", "POMS_020", "POMS_039", "POMS_048"]
+pdata = pdata[~pdata.obs["poms_id"].isin(samples)].copy()
+```
+
+### select celltypes i want to run DEA on
+### not only does celltypist predict a lot of celltypes, i only actually want to focus on the AT subsets for now
+```{python}
+subsets = ["AT1", "AT2"]
+pdata = pdata[pdata.obs["celltypist_label_foetal_lung_celltypist"].isin(subsets)].copy()
+```
+
+### here we view and then remove samples where they have fewer than 10 cells or 1000 counts
+### in this case poms_025 has 0 cells in the AT2 cluster, so no point having them in the comparison as it might break it
+```{python}
+dc.pl.filter_samples(
+    adata=pdata,
+    groupby=["gestation_bin", "poms_id", "celltypist_label_foetal_lung_celltypist"],
+    min_cells=10,
+    min_counts=1000,
+    figsize=(5, 8),
+)
+```
+
+```{python}
+dc.pp.filter_samples(pdata, min_cells=10, min_counts=1000)
+```
+
+```{python}
+
+```

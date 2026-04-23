@@ -183,6 +183,12 @@ for flex in flex_data:
 ```
 
 ```{python}
+mat = flex_adata[0].X
+mat.data[:20]
+mat.data.max()
+```
+
+```{python}
 flex_outlier_list = []
 for flex in flex_data:
     sample_id = flex.obs['sample_id'][0]
@@ -297,8 +303,15 @@ counts.plot(x='sample_id', y='count', kind='bar', figsize=(10,5))
 
 ### save object
 ```{python}
-flex_adata.write("flex_adata_combined_pre_qc.h5ad")
+#flex_adata.write("flex_adata_combined_pre_qc.h5ad")
+flex_adata = sc.read("flex_adata_combined_pre_qc.h5ad")
 ```
+
+```{python}
+mat = flex_adata.X
+mat.data[:20]
+```
+
 
 # DOUBLET REMOVAL
 ### see doublet removal script
@@ -308,6 +321,13 @@ flex_adata.write("flex_adata_combined_pre_qc.h5ad")
 flex_adata = sc.read_h5ad("flex_data_doublets_identified.h5ad")
 flex_adata
 ```
+
+### before continuing, check counts layer looks normal
+```{python}
+mat = flex_adata.layers["counts"]
+mat.data[:20]
+```
+
 
 # QUALITY CONTROL
 ```{python}
@@ -470,7 +490,7 @@ cells_per_sample.to_csv("cells_per_sample_after_filter.csv")
 
 # NORMALISATION
 ### due to this object being transferred into R as a sce, i had to make a counts layer in there. X is now empty because of that, so need to replace and then make counts again like normal
-```{python}
+```{python} 
 flex_adata.X = flex_adata.layers['counts']
 flex_adata.layers['counts'] = flex_adata.X.copy()
 sc.pp.normalize_total(flex_adata, target_sum=1e4)
