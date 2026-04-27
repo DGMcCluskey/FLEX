@@ -46,6 +46,11 @@ pdata = dc.pp.pseudobulk(
 )
 ```
 
+### due to soupx usage, the counts are not integers, so i will round here (post-pseudbulking, so the impact is not as strong)
+```{python}
+pdata.X = np.rint(pdata.X).astype(int)
+```
+
 ### remove samples with low cell counts
 ### ~ symbold inverses (so allows me to remove these samples rather than keep)
 ```{python}
@@ -77,9 +82,13 @@ dc.pp.filter_samples(pdata, min_cells=10, min_counts=1000)
 ```
 
 ```{python}
+from pydeseq2.dds import DeseqDataSet, DefaultInference
+from pydeseq2.ds import DeseqStats
+
+inference = DefaultInference(n_cpus=8)
 dds = DeseqDataSet(
     adata=pdata,
-    design_factors=["gestation_bin", "sex"],
+    design_factors=["gestation_bin", "celltypist_label_foetal_lung_celltypist"],
     refit_cooks=True,
     inference=inference,
 )
@@ -88,8 +97,18 @@ dds = DeseqDataSet(
 dds.deseq2()
 
 # Extract contrast between conditions
-stat_res = DeseqStats(dds, contrast=["disease", "COVID-19", "normal"], inference=inference)
+stat_res = DeseqStats(dds, contrast=["gestation_bin", "<24pcw", ">30pcw"], inference=inference)
 
 # Compute Wald test
 stat_res.summary()
+```
+
+```{python}
+# Extract results
+results_df = stat_res.results_df
+results_df
+```
+
+```{python}
+dc.pl.volcano(results_df, x="log2FoldChange", y="padj")
 ```
