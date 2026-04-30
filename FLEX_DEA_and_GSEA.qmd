@@ -148,8 +148,56 @@ for ct in celltypes:
     sig_dict[ct].to_csv(f"DEG_{ct}_sig.csv")
 ```
 
+
+### plot volcanos or both celltypes with top 10degs labelled
 ```{python}
-dc.pl.volcano(results_dict["AT2"], x="log2FoldChange", y="padj", top = 10, thr_stat = 1)
+fig, axes = plt.subplots(1, 2, figsize=(10, 6), sharex=True, sharey=True)
+
+dc.pl.volcano(
+    results_dict["AT1"],
+    x="log2FoldChange",
+    y="padj",
+    top=10,
+    thr_stat=1,
+    color_pos = "mediumseagreen",
+    color_neg = "mediumorchid",
+    ax=axes[0]
+)
+axes[0].set_title("AT1")
+
+dc.pl.volcano(
+    results_dict["AT2"],
+    x="log2FoldChange",
+    y="padj",
+    top=10,
+    thr_stat=1,
+    color_pos = "mediumseagreen",
+    color_neg = "mediumorchid",
+    ax=axes[1]
+)
+axes[1].set_title("AT2")
+
+plt.tight_layout()
+plt.savefig("AT1_AT2_volcano.png", dpi=300)
+plt.show()
+```
+
+### plot number of degs in AT1  and AT2
+```{python}
+filtered_results = {
+    ct: df[df["padj"] < 0.05].copy()
+    for ct, df in results_dict.items()
+}
+```
+
+```{python}
+deg_number = pd.DataFrame(
+    {"number of DEGs" : [ 897, 68],
+    "celltype": ["AT1", "AT2"]}
+)
+plt.figure()
+sns.barplot(deg_number, x = "celltype", y= "number of DEGs")
+plt.savefig("AT cells DEG number", dpi = 300)
 ```
 
 ### run GSEA using GSEApy
@@ -158,7 +206,7 @@ import gseapy as gp
 ```
 
 ```{python}
-res_df = results_dict["AT1"]
+res_df = results_dict["AT2"]
 
 # rank genes (important)
 rnk = res_df[["stat"]].dropna()
@@ -172,7 +220,7 @@ rnk = rnk.reset_index()
 ```{python}
 pre_res = gp.prerank(
     rnk=rnk,
-    gene_sets="KEGG_2021_Human",
+    gene_sets="KEGG_2026",
     permutation_num=1000,
     outdir=None,
     seed=42
@@ -211,4 +259,19 @@ top_combined = pd.concat([top_pos, top_neg])
 ```{python}
 top_terms = top_combined["Term"].unique()
 pre_res.plot(terms=top_terms)
+```
+
+### saving pathways to csv so that i can load into R and plot in more detail if wanted
+```{python}
+pre_res.res2d.to_csv("gsea_results_AT2.csv")
+```
+
+### plotting a few example genes fromt the pathways for a sense check
+```{python}
+at2 = flex_adata[
+    flex_adata.obs["celltypist_label_foetal_lung_celltypist"] == "AT2"].copy()
+```
+
+```{python}
+sc.pl.violin(at2, keys=["TNFRSF1A", "IL6R"], groupby="gestation_bin", stripplot=False)
 ```

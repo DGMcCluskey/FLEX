@@ -1,0 +1,28 @@
+---
+title: "Untitled"
+format: html
+---
+
+
+```{r}
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+```
+
+```{r}
+df <- read.csv("gsea_results_AT2.csv")
+```
+
+```{r}
+top_bottom <- df %>%
+  filter(FDR.q.val < 0.05) %>%
+  arrange(FDR.q.val) %>%
+  group_by(NES > 0) %>%
+  slice_head(n = 5) %>%
+  ungroup()
+```
+
+```{r}
+
+```
