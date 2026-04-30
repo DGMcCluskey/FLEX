@@ -8,6 +8,8 @@ format: html
 library(dplyr)
 library(tidyr)
 library(ggplot2)
+library(viridis)
+library(stringr)
 ```
 
 ```{r}
@@ -24,5 +26,20 @@ top_bottom <- df %>%
 ```
 
 ```{r}
+top_bottom$genes_in_set <- as.numeric(gsub("%", "", top_bottom$Gene..))
+top_bottom$logFDR <- -log10(top_bottom$FDR.q.val)
+```
 
+```{r}
+p <- ggplot(top_bottom, aes(x= NES, y = reorder(str_wrap(Term, width = 30), NES), size = genes_in_set, colour = logFDR))+geom_point()+theme_bw()+
+    theme(axis.text = element_text(size= 12, colour = "black"),
+    text = element_text(size= 12, colour = "black"))+
+    scale_colour_viridis(option="G", direction = -1, name = "-log10(FDR)")+ylab(NULL)+
+    scale_size_continuous(,
+    breaks = c(10, 30),   # choose manually
+    limits = c(0, max(top_bottom$genes_in_set)),
+    name="% genes in set")+
+        geom_vline(xintercept=0, linetype="dashed", colour = "black")
+p
+ggsave(plot=p, filename="AT2_pathways.png", dpi=300,height=5, width = 8)
 ```

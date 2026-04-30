@@ -275,3 +275,41 @@ at2 = flex_adata[
 ```{python}
 sc.pl.violin(at2, keys=["TNFRSF1A", "IL6R"], groupby="gestation_bin", stripplot=False)
 ```
+
+### also make some one-off enrichment plots for top pathways
+```{python}
+plt.figure(figsize=(12, 6))
+
+pre_res.plot(terms=[
+    "SPLICEOSOME",
+    "VIRAL PROTEIN INTERACTION WITH CYTOKINE AND CYTOKINE RECEPTOR"
+])
+
+plt.subplots_adjust(right=0.75)
+plt.savefig(
+    "AT2_enrichment_plot_top.png",
+    dpi=300,
+    bbox_inches="tight"
+)
+```
+
+### extract the lead genes for a pathway to then plot manually
+```{python}
+genes = pre_res.res2d.loc[
+    pre_res.res2d.Term == "VIRAL PROTEIN INTERACTION WITH CYTOKINE AND CYTOKINE RECEPTOR",
+    "Lead_genes"
+].values[0].split(";")[:10] # chooses number (if square brackets part deleted then takes all). i assume they are ranked by strength of difference?
+```
+
+```{python}
+at2 = flex_adata[
+    flex_adata.obs["celltypist_label_foetal_lung_celltypist"] == "AT2"].copy()
+plt.figure()
+sc.pl.dotplot(
+    at2,
+    var_names=genes,
+    groupby="gestation_bin"
+)
+
+plt.savefig("AT2_viral_protein_lead_genes_dotplot.png", dpi=300, bbox_inches="tight")
+```
