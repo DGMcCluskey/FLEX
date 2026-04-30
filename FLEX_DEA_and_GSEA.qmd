@@ -53,9 +53,12 @@ pdata.X = np.rint(pdata.X).astype(int)
 
 ### remove samples with low cell counts
 ### ~ symbold inverses (so allows me to remove these samples rather than keep)
+### also remove middle gestation bin (24-30pcw) to leave two groups, as three can't be compared (also don't have the n numbers anyway)
 ```{python}
 samples = ["POMS_089", "POMS_020", "POMS_039", "POMS_048"]
 pdata = pdata[~pdata.obs["poms_id"].isin(samples)].copy()
+ages = ["<24pcw", ">30pcw"]
+pdata = pdata[pdata.obs["gestation_bin"].isin(ages)].copy()
 ```
 
 ### select celltypes i want to run DEA on
@@ -82,33 +85,130 @@ dc.pp.filter_samples(pdata, min_cells=10, min_counts=1000)
 ```
 
 ```{python}
+at1 = pdata[pdata.obs["celltypist_label_foetal_lung_celltypist"] == "AT1"].copy()
+at2 = pdata[pdata.obs["celltypist_label_foetal_lung_celltypist"] == "AT2"].copy()
+```
+
+### checking number of samples in each bin
+```{python}
+at1.obs.groupby("gestation_bin")["poms_id"].nunique()
+```
+
+### looped version for running everything quickly
+```{python}
 from pydeseq2.dds import DeseqDataSet, DefaultInference
 from pydeseq2.ds import DeseqStats
 
+celltypes = ["AT1", "AT2"]
+
 inference = DefaultInference(n_cpus=8)
-dds = DeseqDataSet(
-    adata=pdata,
-    design_factors=["gestation_bin", "celltypist_label_foetal_lung_celltypist"],
-    refit_cooks=True,
-    inference=inference,
+
+results_dict = {}   # store full results
+sig_dict = {}       # store significant genes
+
+for ct in celltypes:
+    
+    print(f"Running DE for {ct}")
+    
+    # subset
+    adata_ct = pdata[
+        pdata.obs["celltypist_label_foetal_lung_celltypist"] == ct
+].copy()
+    
+    # sanity check
+    print(adata_ct.obs.groupby("gestation_bin")["poms_id"].nunique())
+    
+    # DESeq2
+    dds = DeseqDataSet(
+        adata=adata_ct,
+        design_factors=["gestation_bin"],
+        refit_cooks=True,
+        inference=inference,
+    )
+    
+    dds.deseq2()
+    
+    stat_res = DeseqStats(
+        dds,
+        contrast=["gestation_bin", ">30pcw", "<24pcw"],
+        inference=inference
+    )
+    
+    stat_res.summary()
+    
+    # extract results
+    res_df = stat_res.results_df.copy()
+    
+    # store
+    results_dict[ct] = res_df
+    sig_dict[ct] = res_df[res_df["padj"] < 0.05]
+    
+    # save to file
+    res_df.to_csv(f"DEG_{ct}_all.csv")
+    sig_dict[ct].to_csv(f"DEG_{ct}_sig.csv")
+```
+
+```{python}
+dc.pl.volcano(results_dict["AT2"], x="log2FoldChange", y="padj", top = 10, thr_stat = 1)
+```
+
+### run GSEA using GSEApy
+```{python}
+import gseapy as gp
+```
+
+```{python}
+res_df = results_dict["AT1"]
+
+# rank genes (important)
+rnk = res_df[["stat"]].dropna()
+rnk = rnk.sort_values("stat", ascending=False)
+
+# reset index if needed
+rnk.index.name = "gene"
+rnk = rnk.reset_index()
+```
+
+```{python}
+pre_res = gp.prerank(
+    rnk=rnk,
+    gene_sets="KEGG_2021_Human",
+    permutation_num=1000,
+    outdir=None,
+    seed=42
+)
+```
+
+```{python}
+pre_res.res2d.head(10)
+```
+
+```{python}
+pre_res.plot(terms=pre_res.res2d.Term.head(5))
+```
+
+### filter significant pathways and select top and bottom 5
+```{python}
+sig = pre_res.res2d[pre_res.res2d["FDR q-val"] < 0.05]
+
+top_pos = (
+    sig[sig["NES"] > 0]
+    .sort_values("FDR q-val")
+    .head(5)
 )
 
-# Compute LFCs
-dds.deseq2()
+top_neg = (
+    sig[sig["NES"] < 0]
+    .sort_values("FDR q-val")
+    .head(5)
+)
 
-# Extract contrast between conditions
-stat_res = DeseqStats(dds, contrast=["gestation_bin", "<24pcw", ">30pcw"], inference=inference)
+top_pos["direction"] = ">30pcw"
+top_neg["direction"] = "<24pcw"
 
-# Compute Wald test
-stat_res.summary()
+top_combined = pd.concat([top_pos, top_neg])
 ```
-
 ```{python}
-# Extract results
-results_df = stat_res.results_df
-results_df
-```
-
-```{python}
-dc.pl.volcano(results_df, x="log2FoldChange", y="padj")
+top_terms = top_combined["Term"].unique()
+pre_res.plot(terms=top_terms)
 ```
