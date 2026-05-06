@@ -13,7 +13,7 @@ library(stringr)
 ```
 
 ```{r}
-df <- read.csv("gsea_results_AT2.csv")
+df <- read.csv("gsea_results_AT1.csv")
 ```
 
 ```{r}
@@ -41,5 +41,5 @@ p <- ggplot(top_bottom, aes(x= NES, y = reorder(str_wrap(Term, width = 30), NES)
     name="% genes in set")+
         geom_vline(xintercept=0, linetype="dashed", colour = "black")
 p
-ggsave(plot=p, filename="AT2_pathways.png", dpi=300,height=5, width = 8)
+ggsave(plot=p, filename="AT1_pathways.png", dpi=300,height=5, width = 8)
 ```

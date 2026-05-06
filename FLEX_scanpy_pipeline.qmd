@@ -997,10 +997,17 @@ flex_adata.obs["gestation_bin"] = (
 )
 ```
 
+### removing samples with <500 cells
+```{python}
+samples_to_remove = ["POMS_089", "POMS_020", "POMS_039", "POMS_048"]
+
+flex_adata = flex_adata[~flex_adata.obs["poms_id"].isin(samples_to_remove)].copy()
+```
+
 ```{python}
 counts = (
     flex_adata.obs
-    .groupby(["gestation_bin", "celltypist_label_foetal_lung_celltypist"])
+    .groupby(["poms_id", "celltypist_label_foetal_lung_celltypist"])
     .size()
     .unstack(fill_value=0)
 )
@@ -1030,7 +1037,7 @@ plt.legend(
     loc="upper left"
 )
 plt.tight_layout()
-plt.savefig("Celltypist_proportions_by_gestation_bin.png", dpi=300, bbox_inches="tight")
+plt.savefig("Celltypist_proportions_by_donor.png", dpi=300, bbox_inches="tight", transparent = True)
 plt.show()
 ```
 
@@ -1063,7 +1070,7 @@ proportions["gestation"] = pd.to_numeric(proportions["gestation"], errors="coerc
 ### plotting longitudinally (un-binned)
 ### removing POMS_089 as this is the same with 2 cells and thus unreliable
 ```{python}
-celltype = "Alveolar fibro"
+celltype = "SPP1+ MΦ"
 
 df = proportions[[celltype, "gestation_bin", "gestation"]].reset_index()
 
@@ -1106,6 +1113,7 @@ plt.show()
 
 ```
 
+### ehckign 3 chemokines for David
 ```{python}
-
+sc.pl.umap(flex_adata, color = ["CCL24", "CCL26", "CCL11"], size = 5)
 ```
