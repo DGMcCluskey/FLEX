@@ -997,6 +997,23 @@ flex_adata.obs["gestation_bin"] = (
 )
 ```
 
+```{python}
+cells_per_sample = flex_adata.obs[["sample_id"]].value_counts().reset_index()
+cells_per_sample["logcount"] = np.log10(cells_per_sample["count"])
+plt.figure(figsize=(10,5))
+ax = sns.barplot(data=cells_per_sample, x="sample_id", y="count")
+
+#ax.set_yscale("log")
+
+for container in ax.containers:
+    ax.bar_label(container, fmt="%.0f")
+
+plt.xticks(rotation=45)
+plt.tight_layout()
+plt.show()
+plt.savefig("final_cell_counts.png", dpi=300, bbox_inches="tight")
+```
+
 ### removing samples with <500 cells
 ```{python}
 samples_to_remove = ["POMS_089", "POMS_020", "POMS_039", "POMS_048"]
@@ -1039,6 +1056,21 @@ plt.legend(
 plt.tight_layout()
 plt.savefig("Celltypist_proportions_by_donor.png", dpi=300, bbox_inches="tight", transparent = True)
 plt.show()
+```
+
+### save proportions to csv
+```{python}
+proportions.to_csv("FLEX_proportions_by_gestation_bin.csv")
+```
+
+### total cells of each celltypist cluster
+```{python}
+counts = (
+    flex_adata.obs["celltypist_label_foetal_lung_celltypist"]
+    .value_counts()
+    .reset_index()
+)
+counts.to_csv("total_cell_numbers_per_celltypist_cluster.csv")
 ```
 
 ### will also plot specific populations, but each donor is represented
